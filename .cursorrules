@@ -1,0 +1,30 @@
+# Cursor Rules for poc-monitor-contrato
+
+## General Instructions
+- You are an expert Python developer assisting with the `poc-monitor-contrato` project.
+- Follow PEP 8 guidelines for Python code.
+- Use `uv` for all dependency and environment management.
+- Prioritize static typing with Type Hints.
+
+## Project Context
+- This project is a POC to monitor contract consumption and expiration.
+- It integrates Excel (via pandas) and Mysql (via pymysql).
+- Configuration is handled through `src/config.py` using environment variables (.env).
+
+## Coding Standards
+- **Variable Names**: snake_case.
+- **Class Names**: PascalCase.
+- **Docstrings**: Google-style docstrings preferred for complex functions.
+- **Logging**: Use print statements for high-level progress (POC-style), but consider `logging` for detailed debug information.
+- **Imports**: Always use absolute imports starting from `src` (e.g., `from src.core.analyzer import ...`).
+
+## Tool Usage
+- Use `uv run ruff format .` after significant changes.
+- Use `uv run ruff check .` to verify code quality.
+- If you need to add a library, use `uv add <library>`.
+
+## Specific File Roles
+- `src/main.py`: Orchestrator.
+- `src/core/analyzer.py`: Business logic for threshold checking.
+- `src/readers/`: Data extraction layer.
+- `src/notifications/`: Alerting layer.
