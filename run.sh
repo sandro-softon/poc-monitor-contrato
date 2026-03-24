@@ -13,8 +13,8 @@ then
     exit 1
 fi
 
-# Executa a rotina via uv
-PYTHONPATH=. uv run src/main.py
+# Executa a rotina via uv repassando argumentos
+PYTHONPATH=. uv run src/main.py "$@"
 
 # Captura o status de saída
 STATUS=$?
