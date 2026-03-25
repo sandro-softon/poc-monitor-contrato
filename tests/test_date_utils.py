@@ -49,3 +49,21 @@ def test_leap_year_end_of_month():
     # Na verdade, pd.DateOffset(months=1) de 28/02/2026 é 28/03/2026.
     print(f"DEBUG: 31/01 -> {inicio} a {fim}")
     assert inicio.day <= 31
+
+def test_trimestral_cycle():
+    start = datetime(2024, 1, 15)
+    now = datetime(2026, 3, 20)
+    # Ciclos tri-mensais em 15/01, 15/04, 15/07, 15/10
+    # Em 20/03/2026, o ciclo atual deve ser 15/01/2026 a 15/04/2026
+    inicio, fim = get_current_cycle(start, "Trimestral", now)
+    assert inicio == datetime(2026, 1, 15)
+    assert fim == datetime(2026, 4, 15)
+
+def test_bimestral_cycle():
+    start = datetime(2024, 1, 15)
+    now = datetime(2026, 3, 20)
+    # Ciclos bi-mensais em 15/01, 15/03, 15/05, etc.
+    # Em 20/03/2026, o ciclo atual deve ser 15/03/2026 a 15/05/2026
+    inicio, fim = get_current_cycle(start, "Bimestral", now)
+    assert inicio == datetime(2026, 3, 15)
+    assert fim == datetime(2026, 5, 15)
