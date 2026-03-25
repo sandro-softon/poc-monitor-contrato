@@ -4,11 +4,12 @@ from typing import Tuple
 
 def get_current_cycle(start_date: datetime, frequency: str, now: datetime = None) -> Tuple[datetime, datetime]:
     """
-    Calcula o ciclo atual de um contrato baseando-se no dia do início original e na frequência.
+    Retorna o início e o fim do ciclo atual de um contrato.
+    Suporta as frequências: 'Mensal', 'Semestral' ou 'Anual'.
     
     Args:
         start_date: A data original de início do contrato (baseline).
-        frequency: Uma das strings: 'Mensal', 'Trimestral', 'Semestral' ou 'Anual'.
+        frequency: Uma das strings: 'Mensal', 'Semestral' ou 'Anual'.
         now: A data de referência atual (opcional, defaults to now).
         
     Returns:
@@ -26,10 +27,6 @@ def get_current_cycle(start_date: datetime, frequency: str, now: datetime = None
         'mês': 1,
         'mes': 1,
         'mensal': 1,
-        'bimestral': 2,
-        'bimestre': 2,
-        'trimestral': 3,
-        'trimestre': 3,
         'semestre': 6,
         'semestral': 6,
         'anual': 12,
