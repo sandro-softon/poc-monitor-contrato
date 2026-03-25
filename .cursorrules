@@ -22,6 +22,7 @@
 - Use `uv run ruff format .` after significant changes.
 - Use `uv run ruff check .` to verify code quality.
 - If you need to add a library, use `uv add <library>`.
+- Use `uv pip install -e .` to register the `src` package for easier imports.
 
 ## Specific File Roles
 - `src/main.py`: Orchestrator.

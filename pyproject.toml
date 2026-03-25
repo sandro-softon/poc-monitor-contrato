@@ -9,3 +9,12 @@ dependencies = [
     "pandas>=3.0.1",
     "python-dotenv>=1.2.2",
 ]
+
+[tool.setuptools]
+packages = ["src"]
+package-dir = {"" = "."}
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]

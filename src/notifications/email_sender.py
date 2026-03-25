@@ -12,25 +12,33 @@ class EmailSender:
         self.email_from = Config.EMAIL_FROM
         self.email_to = Config.EMAIL_TO
 
-    def send_alert(self, alerts: list):
+    def send_alert(self, alerts: list, is_full_report=False):
         if not alerts:
             print("Nenhum alerta para ser enviado.")
             return
 
-        subject = f"[ALERTA] Monitoramento de Contratos - {len(alerts)} contrato(s) exigem atenção"
-        
+        if is_full_report:
+            subject = f"[RELATÓRIO] Monitoramento de Contratos - Relatório Completo ({len(alerts)} contrato(s))"
+            header_text = f"Segue o relatório completo de monitoramento com todos os <strong>{len(alerts)} contrato(s)</strong> processados."
+            plain_intro = f"RELATÓRIO COMPLETO DE MONITORAMENTO DE CONTRATOS\nIdentificamos {len(alerts)} contrato(s) processados.\n"
+        else:
+            subject = f"[ALERTA] Monitoramento de Contratos - {len(alerts)} contrato(s) exigem atenção"
+            header_text = f"Identificamos <strong>{len(alerts)} contrato(s)</strong> que exigem atenção imediata devido a prazos ou volumetria de uso."
+            plain_intro = f"RELATÓRIO GERENCIAL DE MONITORAMENTO DE CONTRATOS\nIdentificamos {len(alerts)} contrato(s) que exigem atenção imediata devido a prazos ou volumetria.\n"
+
         # --- PLAIN TEXT BODY ---
-        body = "RELATÓRIO GERENCIAL DE MONITORAMENTO DE CONTRATOS\n"
+        body = plain_intro
         body += "=" * 60 + "\n\n"
-        body += f"Identificamos {len(alerts)} contrato(s) que exigem atenção imediata devido a prazos ou volumetria.\n\n"
         
         for alert in alerts:
             bd = alert.get('acessos_breakdown', {})
             body += f"■ INSTITUIÇÃO: {alert['instituicao']} ({alert['codigo']})\n"
             body += f"  Número do Contrato...: {alert.get('contrato', '-')}\n"
             body += f"  Serviço Contratado...: {alert.get('servico', '-')}\n"
-            body += f"  Motivo do Alerta.....: {', '.join(alert['motivos'])}\n"
-            body += f"  Período de Corte.....: {alert['inicio']} à {alert['vencimento']} ({alert['dias_restantes']} dias restantes)\n"
+            body += f"  Motivo do Alerta/Ref.: {', '.join(alert['motivos'])}\n"
+            body += f"  Período de Corte.....: {alert['inicio_original']} à {alert['vencimento_original']}\n"
+            body += f"  P. de Corte Atualizado: {alert['inicio_ciclo']} à {alert['fim_ciclo']} ({alert['dias_restantes']} dias restantes)\n"
+            body += f"  Tipo de Corte........: {alert.get('frequencia', '-')}\n"
             body += f"  Acessos no Período...:\n"
             body += f"       Individual: {bd.get('Individual', 0):>10}\n"
             body += f"             Lote: {bd.get('Lote', 0):>10}\n"
@@ -42,7 +50,7 @@ class EmailSender:
         body += "Este é um e-mail automático do sistema de monitoramento.\n"
         
         # --- HTML BODY ---
-        html_body = f"""\
+        html_body = f"""
         <html>
           <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
             <div style="max-width: 700px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
@@ -50,19 +58,25 @@ class EmailSender:
                     <h2 style="margin: 0;">Relatório Gerencial de Monitoramento</h2>
                 </div>
                 <div style="padding: 20px;">
-                    <p style="font-size: 16px;">Identificamos <strong>{len(alerts)} contrato(s)</strong> que exigem atenção imediata devido a prazos ou volumetria de uso.</p>
+                    <p style="font-size: 16px;">{header_text}</p>
         """
         
         for alert in alerts:
             bd = alert.get('acessos_breakdown', {})
-            html_body += f"""\
-                    <div style="margin-bottom: 25px; padding: 20px; border: 1px solid #ddd; border-left: 5px solid #e74c3c; border-radius: 6px; background-color: #fcfcfc;">
+            # Dinamicamente muda a cor da borda se não for um alerta real
+            # Vermelho (#e74c3c) para alertas reais, Azul (#3498db) para apenas relatório
+            border_color = "#e74c3c" if any(m in ["Próximo da Data de Corte Final", "Volume Elevado/Excedido"] for m in alert['motivos']) else "#3498db"
+
+            html_body += f"""
+                    <div style="margin-bottom: 25px; padding: 20px; border: 1px solid #ddd; border-left: 5px solid {border_color}; border-radius: 6px; background-color: #fcfcfc;">
                         <h3 style="margin-top: 0; color: #2980b9; border-bottom: 1px solid #eee; padding-bottom: 10px;">🏢 {alert['instituicao']} ({alert['codigo']})</h3>
                         <table style="width: 100%; border-collapse: collapse; font-size: 15px;">
                             <tr><td style="padding: 6px 0; width: 180px; color: #555;"><strong>Número do Contrato:</strong></td><td>{alert.get('contrato', '-')}</td></tr>
                             <tr><td style="padding: 6px 0; color: #555;"><strong>Serviço Contratado:</strong></td><td><span style="background-color: #eaf4fb; color: #2980b9; padding: 2px 8px; border-radius: 4px; font-weight: bold;">{alert.get('servico', '-')}</span></td></tr>
-                            <tr><td style="padding: 6px 0; color: #555;"><strong>Motivo do Alerta:</strong></td><td><span style="color: #e74c3c; font-weight: bold;">{', '.join(alert['motivos'])}</span></td></tr>
-                            <tr><td style="padding: 6px 0; color: #555;"><strong>Período de Corte:</strong></td><td>{alert['inicio']} à {alert['vencimento']} <span style="color: #e67e22;">({alert['dias_restantes']} dias restantes)</span></td></tr>
+                            <tr><td style="padding: 6px 0; color: #555;"><strong>Motivo do Alerta/Ref:</strong></td><td><span style="color: {border_color}; font-weight: bold;">{', '.join(alert['motivos'])}</span></td></tr>
+                            <tr><td style="padding: 6px 0; color: #555;"><strong>Período de Corte:</strong></td><td>{alert['inicio_original']} à {alert['vencimento_original']}</td></tr>
+                            <tr><td style="padding: 6px 0; color: #555;"><strong>P. Corte Atualizado:</strong></td><td>{alert['inicio_ciclo']} à {alert['fim_ciclo']} <span style="color: #e67e22;">({alert['dias_restantes']} dias restantes)</span></td></tr>
+                            <tr><td style="padding: 6px 0; color: #555;"><strong>Tipo de Corte:</strong></td><td>{alert.get('frequencia', '-')}</td></tr>
                             <tr>
                               <td style="padding: 6px 0; color: #555; vertical-align: top;"><strong>Acessos no Período:</strong></td>
                               <td>
@@ -82,7 +96,7 @@ class EmailSender:
                     </div>
             """
             
-        html_body += """\
+        html_body += """
                 </div>
                 <div style="background-color: #f1f2f6; padding: 15px; text-align: center; color: #7f8c8d; font-size: 12px; border-top: 1px solid #e0e0e0;">
                     Este é um e-mail automático gerado pelo sistema de monitoramento de contratos.<br>

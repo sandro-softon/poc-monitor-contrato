@@ -21,6 +21,11 @@ Exemplos de uso:
         default=Config.DEBUG,
         help="Ativa o modo de depuração (logs SQL e detalhes)."
     )
+    parser.add_argument(
+        "--full",
+        action="store_true",
+        help="Envia o relatório de todos os contratos, independente de alertas."
+    )
     
     args = parser.parse_args()
     
@@ -34,17 +39,23 @@ Exemplos de uso:
     print("Lendo planilha e extraindo dados de consumo...")
     if args.debug:
         print("[MODO DEBUG ATIVADO]")
+    if args.full:
+        print("[MODO RELATÓRIO COMPLETO ATIVADO]")
         
     analyzer = ContractAnalyzer(excel_reader, access_reader)
-    alerts = analyzer.analyze(debug=args.debug)
+    alerts = analyzer.analyze(debug=args.debug, full=args.full)
     
     # 3. Notificação
     if alerts:
-        print(f"Encontrados {len(alerts)} contrato(s) com alerta de vencimento/uso.")
+        if args.full:
+            print(f"Gerando relatório completo para {len(alerts)} contrato(s).")
+        else:
+            print(f"Encontrados {len(alerts)} contrato(s) com alerta de vencimento/uso.")
+            
         sender = EmailSender()
-        sender.send_alert(alerts)
+        sender.send_alert(alerts, is_full_report=args.full)
     else:
-        print("Nenhum contrato atingiu os parâmetros de alerta.")
+        print("Nenhum contrato encontrado ou processado.")
         
     print("Rotina finalizada.")
 
