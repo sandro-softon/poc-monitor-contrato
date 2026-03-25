@@ -8,7 +8,7 @@ def get_current_cycle(start_date: datetime, frequency: str, now: datetime = None
     
     Args:
         start_date: A data original de início do contrato (baseline).
-        frequency: Uma das strings: 'Mês', 'Semestre' ou 'Anual'.
+        frequency: Uma das strings: 'Mensal', 'Trimestral', 'Semestral' ou 'Anual'.
         now: A data de referência atual (opcional, defaults to now).
         
     Returns:
@@ -28,7 +28,8 @@ def get_current_cycle(start_date: datetime, frequency: str, now: datetime = None
         'mensal': 1,
         'semestre': 6,
         'semestral': 6,
-        'anual': 12
+        'anual': 12,
+        'ano': 12
     }
     
     # Se não encontrar frequência válida, assume Anual como fallback seguro

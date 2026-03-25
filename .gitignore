@@ -6,6 +6,9 @@ dist/
 wheels/
 *.egg-info
 
+# ag-kit
+.agent
+
 # Virtual environments
 .venv
 .env
