@@ -4,13 +4,13 @@ Ferramenta de automação para monitoramento de vencimento e consumo de contrato
 
 ## Descrição
 
-O projeto realiza a leitura de uma planilha Excel contendo metadados de contratos e consulta um banco de dados Access para obter o consumo atualizado de cada contrato. Com base em thresholds configuráveis, o sistema identifica contratos próximos do vencimento ou com uso excessivo e envia alertas para os administradores.
+O projeto realiza a leitura de uma planilha Excel contendo metadados de contratos e consulta um banco de dados MySQL para obter o consumo atualizado de cada contrato. Com base em thresholds configuráveis, o sistema identifica contratos próximos do vencimento ou com uso excessivo e envia alertas para os administradores.
 
 ## Estrutura do Projeto
 
 - `src/main.py`: Ponto de entrada da aplicação.
 - `src/core/analyzer.py`: Lógica central de comparação entre limites e uso real.
-- `src/readers/`: Módulos para leitura de dados (Excel e Access).
+- `src/readers/`: Módulos para leitura de dados (Excel e MySQL).
 - `src/notifications/`: Gerenciamento de alertas e envio de e-mails.
 - `src/config.py`: Centralização de variáveis de ambiente e configurações.
 - `docs/`: Documentação adicional e arquivos de suporte.
@@ -36,16 +36,22 @@ Crie um arquivo `.env` na raiz do projeto seguindo o modelo `.env.example`:
 ```bash
 # Banco de Dados
 DB_HOST=localhost
+DB_USER=root
+DB_PASS=
 DB_DATABASE=meubanco
 
 # Email
 SMTP_HOST=127.0.0.1
 SMTP_PORT=25
+SMTP_USER=
+SMTP_PASS=
+SMTP_USE_TLS=False
 EMAIL_FROM=monitor@localhost
 EMAIL_TO="admin@localhost,diretor@localhost,responsavel@localhost"
 
 # Caminhos
 EXCEL_PATH=docs/Softon_Controle de acessos_clientes_VF.xlsx
+EXCEL_SHEET=
 
 # Parâmetros de Alerta
 ALERT_DAYS_BEFORE_EXPIRATION=30

@@ -1,15 +1,17 @@
-# Cursor Rules for poc-monitor-contrato
+# Cursor Rules for poc-monitor-contrato-kity
 
 ## General Instructions
-- You are an expert Python developer assisting with the `poc-monitor-contrato` project.
+- You are an expert Python developer assisting with the `poc-monitor-contrato-kity` project.
 - Follow PEP 8 guidelines for Python code.
 - Use `uv` for all dependency and environment management.
 - Prioritize static typing with Type Hints.
 
 ## Project Context
 - This project is a POC to monitor contract consumption and expiration.
-- It integrates Excel (via pandas) and Mysql (via pymysql).
+- It integrates Excel (via pandas/openpyxl) and MySQL (via mysql-connector-python).
+- `src/readers/access_reader.py` keeps a legacy class/file name, but it queries MySQL tables.
 - Configuration is handled through `src/config.py` using environment variables (.env).
+- Runtime configuration includes DB connection, SMTP settings, `EXCEL_PATH`, optional `EXCEL_SHEET`, alert thresholds, and `DEBUG`.
 
 ## Coding Standards
 - **Variable Names**: snake_case.
@@ -17,15 +19,20 @@
 - **Docstrings**: Google-style docstrings preferred for complex functions.
 - **Logging**: Use print statements for high-level progress (POC-style), but consider `logging` for detailed debug information.
 - **Imports**: Always use absolute imports starting from `src` (e.g., `from src.core.analyzer import ...`).
+- **Date Ranges**: For SQL periods, do not use `BETWEEN`; use `DATA >= start AND DATA < next_day_after_end`.
 
 ## Tool Usage
 - Use `uv run ruff format .` after significant changes.
 - Use `uv run ruff check .` to verify code quality.
+- Use `uv run pytest` to run the automated test suite.
 - If you need to add a library, use `uv add <library>`.
 - Use `uv pip install -e .` to register the `src` package for easier imports.
+- Use `./run.sh [--debug] [--full]` or `uv run src/main.py [--debug] [--full]` to run the monitor.
 
 ## Specific File Roles
 - `src/main.py`: Orchestrator.
 - `src/core/analyzer.py`: Business logic for threshold checking.
-- `src/readers/`: Data extraction layer.
+- `src/core/date_utils.py`: Contract cycle calculations.
+- `src/readers/`: Data extraction layer for Excel and MySQL.
 - `src/notifications/`: Alerting layer.
+- `tests/`: Pytest coverage for Excel parsing and date-cycle rules.
