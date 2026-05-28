@@ -28,6 +28,9 @@ class ContractAnalyzer:
             frequencia = str(contract.get("Frequencia", "Anual")).strip().lower()
 
             if pd.isna(dt_fim) or pd.isna(dt_inicio):
+                if debug:
+                    id_text = numero_contrato or instituicao or 'n/a'
+                    print(f"  [SKIP] Contrato {id_text} pulado: dt_inicio={dt_inicio} dt_fim={dt_fim}")
                 continue
             
             dt_inicio_ciclo, dt_fim_ciclo = get_current_cycle(dt_inicio, frequencia, now)

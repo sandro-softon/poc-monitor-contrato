@@ -21,6 +21,8 @@ class Config:
     
     # Caminhos
     EXCEL_PATH = os.getenv("EXCEL_PATH", "docs/Softon_Controle de acessos_clientes_VF.xlsx")
+    # Optional: especificar nome da sheet a ser lida (ex: 'Sheet1')
+    EXCEL_SHEET = os.getenv("EXCEL_SHEET", None)
     
     # Regras/Thresholds Default
     ALERT_DAYS_BEFORE_EXPIRATION = int(os.getenv("ALERT_DAYS_BEFORE_EXPIRATION", 30))

@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Ignora venv externo para evitar warning do uv
+unset VIRTUAL_ENV
+
 # Exibe mensagem de início
 echo "===================================================="
 echo "Iniciando Processo de Monitoramento de Contratos"
