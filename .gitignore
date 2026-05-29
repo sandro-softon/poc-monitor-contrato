@@ -14,3 +14,6 @@ wheels/
 .venv
 .env
 .~lock.*
+
+# Runtime logs
+logs/

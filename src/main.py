@@ -1,9 +1,15 @@
 import argparse
+import logging
 from src.config import Config
 from src.readers.excel_reader import ContractReader
 from src.readers.access_reader import AccessReader
 from src.core.analyzer import ContractAnalyzer
 from src.notifications.email_sender import EmailSender
+from src.logging_config import setup_logging
+
+
+logger = logging.getLogger(__name__)
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -13,11 +19,12 @@ def main():
 Exemplos de uso:
   python src/main.py --help
   ./run.sh --debug
+  ./run.sh --test 12345
         """
     )
     parser.add_argument(
-        "--debug", 
-        action="store_true", 
+        "--debug",
+        action="store_true",
         default=Config.DEBUG,
         help="Ativa o modo de depuração (logs SQL e detalhes)."
     )
@@ -26,38 +33,60 @@ Exemplos de uso:
         action="store_true",
         help="Envia o relatório de todos os contratos, independente de alertas."
     )
-    
+    parser.add_argument(
+        "--test",
+        metavar="CODIGO_INSTITUICAO",
+        help="Executa apenas a instituição informada, exibe detalhes e envia e-mail.",
+    )
+
     args = parser.parse_args()
-    
-    print("Iniciando rotina de monitoramento de contratos...")
-    
+    setup_logging(debug=args.debug or bool(args.test))
+
+    logger.info("Iniciando rotina de monitoramento de contratos...")
+
     # 1. Leitura
     excel_reader = ContractReader(Config.EXCEL_PATH)
     access_reader = AccessReader()
-    
+
     # 2. Análise
-    print("Lendo planilha e extraindo dados de consumo...")
+    logger.info("Lendo planilha e extraindo dados de consumo...")
     if args.debug:
-        print("[MODO DEBUG ATIVADO]")
+        logger.info("[MODO DEBUG ATIVADO]")
     if args.full:
-        print("[MODO RELATÓRIO COMPLETO ATIVADO]")
-        
+        logger.info("[MODO RELATÓRIO COMPLETO ATIVADO]")
+    if args.test:
+        logger.info("[MODO TESTE ATIVADO] Instituição: %s", args.test)
+
     analyzer = ContractAnalyzer(excel_reader, access_reader)
-    alerts = analyzer.analyze(debug=args.debug, full=args.full)
-    
+    full_report = args.full or bool(args.test)
+    alerts = analyzer.analyze(full=full_report, institution_code=args.test)
+
     # 3. Notificação
     if alerts:
-        if args.full:
-            print(f"Gerando relatório completo para {len(alerts)} contrato(s).")
+        if args.test:
+            logger.info(
+                "Gerando relatório de teste para %s contrato(s) da instituição %s.",
+                len(alerts),
+                args.test,
+            )
+        elif args.full:
+            logger.info("Gerando relatório completo para %s contrato(s).", len(alerts))
         else:
-            print(f"Encontrados {len(alerts)} contrato(s) com alerta de vencimento/uso.")
-            
+            logger.info(
+                "Encontrados %s contrato(s) com alerta de vencimento/uso.",
+                len(alerts),
+            )
+
         sender = EmailSender()
-        sender.send_alert(alerts, is_full_report=args.full)
+        sender.send_alert(alerts, is_full_report=full_report)
     else:
-        print("Nenhum contrato encontrado ou processado.")
-        
-    print("Rotina finalizada.")
+        if args.test:
+            logger.info("Nenhum contrato encontrado para a instituição %s.", args.test)
+        else:
+            logger.info("Nenhum contrato encontrado ou processado.")
+
+    logger.info("Rotina finalizada.")
+
 
 if __name__ == "__main__":
     main()

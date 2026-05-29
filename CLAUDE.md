@@ -9,8 +9,8 @@ Este projeto utiliza o `uv` para gerenciamento de ambiente virtual e dependênci
 
 - `uv sync`: Sincroniza o ambiente com as dependências do `pyproject.toml`.
 - `uv add <pacote>`: Adiciona uma nova dependência.
-- `./run.sh [--debug] [--full]`: Executa a rotina de monitoramento, repassando argumentos para o Python.
-- `uv run src/main.py [--debug] [--full]`: Executa o ponto de entrada principal diretamente.
+- `./run.sh [--debug] [--full] [--test CODIGO]`: Executa a rotina de monitoramento, repassando argumentos para o Python.
+- `uv run src/main.py [--debug] [--full] [--test CODIGO]`: Executa o ponto de entrada principal diretamente.
 - `uv pip install -e .`: Instala o projeto em modo editável (permite rodar `python3 src/main.py` sem PYTHONPATH).
 
 ### Qualidade de Código
@@ -28,6 +28,9 @@ Este projeto utiliza o `uv` para gerenciamento de ambiente virtual e dependênci
 - **Intervalos de Data**: Para consultas SQL, evite `BETWEEN`. Use a lógica de intervalo aberto: `DATA >= inicio AND DATA < dia_seguinte_ao_fim`. Isso garante inclusividade total sem depender da precisão de tempo (HH:MM:SS) do DB.
 - **Banco de Dados**: O consumo é consultado em MySQL via `mysql-connector-python`. A classe `AccessReader` mantém nome legado, mas não acessa banco Access.
 - **Planilha**: A entrada vem do Excel em `Config.EXCEL_PATH`; `Config.EXCEL_SHEET` pode fixar a aba, senão o leitor escolhe a primeira aba com colunas relevantes.
+- **Logs**: O projeto grava logs em console e arquivo (`LOG_DIR`), com retenção configurável por `LOG_RETENTION_DAYS`.
+- **Modo Teste**: `--test CODIGO` filtra contratos por `Codigo Instituicao` (e também `Cod Compartilhado`), força relatório completo para o filtro e envia e-mail normalmente.
+- **Relatório de Período**: A query SQL usa limite superior exclusivo (`< dia_seguinte`), mas a data final exibida no relatório é apresentada como o dia anterior (limite inclusivo humano).
 
 ## Estrutura do Projeto
 - `src/main.py`: Orquestrador da rotina de monitoramento.

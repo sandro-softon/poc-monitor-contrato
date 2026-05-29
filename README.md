@@ -93,11 +93,40 @@ Para rodar a rotina de monitoramento:
 ./run.sh
 ```
 
+Modo de teste por instituição (executa apenas contratos da instituição informada e envia e-mail normalmente):
+
+```bash
+./run.sh --test 12345
+```
+
 Ou diretamente via `uv`:
 
 ```bash
 uv run src/main.py
 ```
+
+Com opções:
+
+```bash
+uv run src/main.py --debug
+uv run src/main.py --full
+uv run src/main.py --test 12345
+```
+
+## Logs
+
+O projeto usa logging em console e arquivo, com rotação diária e retenção.
+
+Variáveis relevantes no `.env`:
+
+```bash
+LOG_DIR=logs
+LOG_RETENTION_DAYS=30
+```
+
+- Arquivo principal: `logs/monitor.log`
+- Rotação: diária
+- Retenção: `LOG_RETENTION_DAYS` dias
 
 ## Desenvolvimento
 

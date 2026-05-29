@@ -1,6 +1,34 @@
+import logging
 import smtplib
 from email.message import EmailMessage
 from src.config import Config
+
+
+logger = logging.getLogger(__name__)
+
+
+def _format_brl(value) -> str:
+    if value is None:
+        return "-"
+
+    text = str(value).strip()
+    if not text:
+        return "-"
+
+    try:
+        normalized = text.replace("R$", "").replace(" ", "")
+        if "," in normalized and "." in normalized:
+            normalized = normalized.replace(".", "").replace(",", ".")
+        elif "," in normalized:
+            normalized = normalized.replace(",", ".")
+
+        amount = float(normalized)
+    except (ValueError, TypeError):
+        return "-"
+
+    formatted = f"{amount:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    return f"R$ {formatted}"
+
 
 class EmailSender:
     def __init__(self):
@@ -14,7 +42,7 @@ class EmailSender:
 
     def send_alert(self, alerts: list, is_full_report=False):
         if not alerts:
-            print("Nenhum alerta para ser enviado.")
+            logger.info("Nenhum alerta para ser enviado.")
             return
 
         if is_full_report:
@@ -36,8 +64,7 @@ class EmailSender:
             body += f"  Número do Contrato...: {alert.get('contrato', '-')}\n"
             body += f"  Serviço Contratado...: {alert.get('servico', '-')}\n"
             body += f"  Motivo do Alerta/Ref.: {', '.join(alert['motivos'])}\n"
-            body += f"  Período de Corte.....: {alert['inicio_original']} à {alert['vencimento_original']}\n"
-            body += f"  P. de Corte Atualizado: {alert['inicio_ciclo']} à {alert['fim_ciclo']} ({alert['dias_restantes']} dias restantes)\n"
+            body += f"  Período de Corte.....: {alert['inicio_ciclo']} à {alert['fim_ciclo']} ({alert['dias_restantes']} dias restantes)\n"
             body += f"  Tipo de Corte........: {alert.get('frequencia', '-')}\n"
             body += f"  Acessos no Período...:\n"
             body += f"       Individual: {bd.get('Individual', 0):>10}\n"
@@ -45,6 +72,7 @@ class EmailSender:
             body += f"              API: {bd.get('Api', bd.get('API', 0)):>10}\n"
             body += f"            Total: {alert['acessos_realizados']:>10}  de  {alert['limite_total']} acessos\n"
             body += f"  Consumo do Limite....: {alert['perc_uso']}%\n"
+            body += f"  Valor Excedente......: {_format_brl(alert.get('valor_excedente'))}\n"
             body += "\n" + "-" * 60 + "\n\n"
             
         body += "Este é um e-mail automático do sistema de monitoramento.\n"
@@ -74,8 +102,7 @@ class EmailSender:
                             <tr><td style="padding: 6px 0; width: 180px; color: #555;"><strong>Número do Contrato:</strong></td><td>{alert.get('contrato', '-')}</td></tr>
                             <tr><td style="padding: 6px 0; color: #555;"><strong>Serviço Contratado:</strong></td><td><span style="background-color: #eaf4fb; color: #2980b9; padding: 2px 8px; border-radius: 4px; font-weight: bold;">{alert.get('servico', '-')}</span></td></tr>
                             <tr><td style="padding: 6px 0; color: #555;"><strong>Motivo do Alerta/Ref:</strong></td><td><span style="color: {border_color}; font-weight: bold;">{', '.join(alert['motivos'])}</span></td></tr>
-                            <tr><td style="padding: 6px 0; color: #555;"><strong>Período de Corte:</strong></td><td>{alert['inicio_original']} à {alert['vencimento_original']}</td></tr>
-                            <tr><td style="padding: 6px 0; color: #555;"><strong>P. Corte Atualizado:</strong></td><td>{alert['inicio_ciclo']} à {alert['fim_ciclo']} <span style="color: #e67e22;">({alert['dias_restantes']} dias restantes)</span></td></tr>
+                            <tr><td style="padding: 6px 0; color: #555;"><strong>Período de Corte:</strong></td><td>{alert['inicio_ciclo']} à {alert['fim_ciclo']} <span style="color: #e67e22;">({alert['dias_restantes']} dias restantes)</span></td></tr>
                             <tr><td style="padding: 6px 0; color: #555;"><strong>Tipo de Corte:</strong></td><td>{alert.get('frequencia', '-')}</td></tr>
                             <tr>
                               <td style="padding: 6px 0; color: #555; vertical-align: top;"><strong>Acessos no Período:</strong></td>
@@ -92,6 +119,7 @@ class EmailSender:
                               </td>
                             </tr>
                             <tr><td style="padding: 6px 0; color: #555;"><strong>Consumo do Limite:</strong></td><td><strong>{alert['perc_uso']}%</strong></td></tr>
+                            <tr><td style="padding: 6px 0; color: #555;"><strong>Valor Excedente:</strong></td><td><strong>{_format_brl(alert.get('valor_excedente'))}</strong></td></tr>
                         </table>
                     </div>
             """
@@ -127,10 +155,17 @@ class EmailSender:
                 
                 if self.user and self.password:
                     server.login(self.user, self.password)
-                
+
                 server.send_message(msg)
-            print(f"E-mail de alerta enviado com sucesso para {', '.join(self.email_to)}.")
+            logger.info(
+                "E-mail de alerta enviado com sucesso para %s.",
+                ", ".join(self.email_to),
+            )
         except Exception as e:
-            print(f"Erro ao enviar o e-mail via SMTP ({self.host}:{self.port}): {e}")
-            print("\nConteúdo do e-mail que não pôde ser enviado (Fallback Log):")
-            print(body)
+            logger.error(
+                "Erro ao enviar o e-mail via SMTP (%s:%s): %s",
+                self.host,
+                self.port,
+                e,
+            )
+            logger.debug("Conteúdo do e-mail que não pôde ser enviado:\n%s", body)

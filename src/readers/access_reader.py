@@ -1,8 +1,12 @@
+import logging
 import mysql.connector
 from mysql.connector import Error
 from typing import List, Dict
 from datetime import datetime, timedelta
 from src.config import Config
+
+
+logger = logging.getLogger(__name__)
 
 
 class AccessReader:
@@ -22,7 +26,7 @@ class AccessReader:
             )
             return conn
         except Error as e:
-            print(f"Erro ao conectar ao MySQL: {e}")
+            logger.error("Erro ao conectar ao MySQL: %s", e)
             return None
 
     def get_accesses_by_service(
@@ -49,12 +53,19 @@ class AccessReader:
         try:
             dt_start = datetime.strptime(start_date[:10], "%Y-%m-%d")
             dt_end = datetime.strptime(end_date[:10], "%Y-%m-%d") + timedelta(days=1)
-            
+
             start_param = dt_start.strftime("%Y-%m-%d")
             end_param = dt_end.strftime("%Y-%m-%d")
         except Exception:
             start_param = start_date[:10]
             end_param = end_date[:10]
+
+        logger.debug(
+            "[SQL PERÍODO] DATA_ACESSO/DT_CONCLUSAO >= %s e < %s | códigos=%s",
+            start_param,
+            end_param,
+            ", ".join(codes),
+        )
 
         result = {"API": 0, "Individual": 0, "Lote": 0}
 
@@ -105,7 +116,7 @@ class AccessReader:
                 if tipo in result:
                     result[tipo] = int(row["total"])
         except Error as e:
-            print(f"Erro na consulta de acessos para {codes}: {e}")
+            logger.error("Erro na consulta de acessos para %s: %s", codes, e)
         finally:
             if conn and conn.is_connected():
                 cursor.close()

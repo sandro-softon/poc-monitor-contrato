@@ -23,9 +23,10 @@ class Config:
     EXCEL_PATH = os.getenv("EXCEL_PATH", "docs/Softon_Controle de acessos_clientes_VF.xlsx")
     # Optional: especificar nome da sheet a ser lida (ex: 'Sheet1')
     EXCEL_SHEET = os.getenv("EXCEL_SHEET", None)
+    LOG_DIR = os.getenv("LOG_DIR", "logs")
+    LOG_RETENTION_DAYS = int(os.getenv("LOG_RETENTION_DAYS", 30))
     
     # Regras/Thresholds Default
     ALERT_DAYS_BEFORE_EXPIRATION = int(os.getenv("ALERT_DAYS_BEFORE_EXPIRATION", 30))
     ALERT_USAGE_PERCENTAGE = float(os.getenv("ALERT_USAGE_PERCENTAGE", 0.8))
     DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "yes")
-

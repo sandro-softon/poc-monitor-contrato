@@ -1,7 +1,21 @@
+import logging
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 from src.config import Config
 from src.core.date_utils import get_current_cycle
+
+
+logger = logging.getLogger(__name__)
+
+
+def _normalize_code(value) -> str:
+    if value is None or pd.isna(value):
+        return ""
+
+    text = str(value).strip()
+    if text.endswith(".0"):
+        return text[:-2]
+    return text
 
 
 class ContractAnalyzer:
@@ -9,15 +23,16 @@ class ContractAnalyzer:
         self.excel_reader = excel_reader
         self.access_reader = access_reader
 
-    def analyze(self, debug=False, full=False):
+    def analyze(self, full=False, institution_code: str | None = None):
         contracts = self.excel_reader.read_contracts()
         alerts = []
+        filter_code = _normalize_code(institution_code)
 
         now = datetime.now()
 
         for contract in contracts:
             # ... (previous code remains same until alert check)
-            instituicao = str(contract.get("Codigo Instituicao", "")).strip()
+            instituicao = _normalize_code(contract.get("Codigo Instituicao", ""))
             nome = contract.get("Nome Instituicao")
             numero_contrato = str(contract.get("Numero Contrato", "")).strip()
             servico = str(contract.get("Serviços Contratados", "")).strip()
@@ -27,18 +42,41 @@ class ContractAnalyzer:
             acessos_contrato = contract.get("acessos contratados", 0)
             frequencia = str(contract.get("Frequencia", "Anual")).strip().lower()
 
-            if pd.isna(dt_fim) or pd.isna(dt_inicio):
-                if debug:
-                    id_text = numero_contrato or instituicao or 'n/a'
-                    print(f"  [SKIP] Contrato {id_text} pulado: dt_inicio={dt_inicio} dt_fim={dt_fim}")
+            cod_compartilhado_normalizado = _normalize_code(cod_compartilhado)
+            if filter_code and filter_code not in {
+                instituicao,
+                cod_compartilhado_normalizado,
+            }:
                 continue
-            
+
+            if pd.isna(dt_fim) or pd.isna(dt_inicio):
+                id_text = numero_contrato or instituicao or "n/a"
+                logger.debug(
+                    "[SKIP] Contrato %s pulado: dt_inicio=%s dt_fim=%s",
+                    id_text,
+                    dt_inicio,
+                    dt_fim,
+                )
+                continue
+
             dt_inicio_ciclo, dt_fim_ciclo = get_current_cycle(dt_inicio, frequencia, now)
             codes = [instituicao]
-            if cod_compartilhado and not pd.isna(cod_compartilhado):
-                codes.append(str(cod_compartilhado).strip())
+            if cod_compartilhado_normalizado:
+                codes.append(cod_compartilhado_normalizado)
 
-            print(f"Processando: {nome} ({instituicao}) | Serviço: {servico} | Contrato: {numero_contrato}")
+            logger.info(
+                "Processando: %s (%s) | Serviço: %s | Contrato: %s",
+                nome,
+                instituicao,
+                servico,
+                numero_contrato,
+            )
+            logger.debug(
+                "[PERÍODO] Ciclo usado para contagem: %s até %s | Códigos: %s",
+                dt_inicio_ciclo.strftime("%Y-%m-%d"),
+                dt_fim_ciclo.strftime("%Y-%m-%d"),
+                ", ".join(codes),
+            )
             dias_restantes = (dt_fim_ciclo - now).days
             alerta_vencimento = False
             if 0 <= dias_restantes <= Config.ALERT_DAYS_BEFORE_EXPIRATION:
@@ -56,6 +94,15 @@ class ContractAnalyzer:
             acessos_realizados = sum(
                 acessos_por_servico.get(s, 0) for s in servicos_lista
             )
+            if filter_code:
+                logger.info(
+                    "Acessos consolidados: Individual=%s | Lote=%s | API=%s | Total=%s de %s",
+                    acessos_por_servico.get("Individual", 0),
+                    acessos_por_servico.get("Lote", 0),
+                    acessos_por_servico.get("API", 0),
+                    acessos_realizados,
+                    limite_total,
+                )
 
             alerta_uso = False
             perc_uso = 0.0
@@ -73,7 +120,7 @@ class ContractAnalyzer:
                     ]
                     if v
                 ]
-                
+
                 if full and not motivos:
                     motivos = ["Relatório Completo"]
 
@@ -87,23 +134,36 @@ class ContractAnalyzer:
                         "inicio_original": dt_inicio.strftime("%Y-%m-%d"),
                         "vencimento_original": dt_fim.strftime("%Y-%m-%d"),
                         "inicio_ciclo": dt_inicio_ciclo.strftime("%Y-%m-%d"),
-                        "fim_ciclo": dt_fim_ciclo.strftime("%Y-%m-%d"),
+                        "fim_ciclo": (dt_fim_ciclo - timedelta(days=1)).strftime(
+                            "%Y-%m-%d"
+                        ),
                         "dias_restantes": dias_restantes,
                         "limite_total": limite_total,
                         "acessos_realizados": acessos_realizados,
                         "acessos_breakdown": acessos_por_servico,
                         "perc_uso": round(perc_uso * 100, 2),
+                        "valor_excedente": contract.get("Valor Excedente"),
                         "motivos": motivos,
                     }
                 )
-                if debug:
-                    print(
-                        f"  [ALERTA] {', '.join(servicos_lista)}: {acessos_realizados}/{limite_total} ({perc_uso:.1%}) | Venc: {dt_fim.strftime('%Y-%m-%d')} | Dias: {dias_restantes}"
-                    )
+                logger.debug(
+                    "[ALERTA] %s: %s/%s (%.1f%%) | Venc: %s | Dias: %s",
+                    ", ".join(servicos_lista),
+                    acessos_realizados,
+                    limite_total,
+                    perc_uso * 100,
+                    dt_fim.strftime("%Y-%m-%d"),
+                    dias_restantes,
+                )
             else:
-                if debug:
-                    print(
-                        f"  [OK] {', '.join(servicos_lista)}: {acessos_realizados}/{limite_total} ({perc_uso:.1%}) | Venc: {dt_fim.strftime('%Y-%m-%d')} | Dias: {dias_restantes}"
-                    )
+                logger.debug(
+                    "[OK] %s: %s/%s (%.1f%%) | Venc: %s | Dias: %s",
+                    ", ".join(servicos_lista),
+                    acessos_realizados,
+                    limite_total,
+                    perc_uso * 100,
+                    dt_fim.strftime("%Y-%m-%d"),
+                    dias_restantes,
+                )
 
         return alerts
