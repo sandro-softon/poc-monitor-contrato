@@ -131,11 +131,11 @@ class ContractAnalyzer:
                         "contrato": numero_contrato,
                         "servico": servico,
                         "frequencia": frequencia.title(),
-                        "inicio_original": dt_inicio.strftime("%Y-%m-%d"),
-                        "vencimento_original": dt_fim.strftime("%Y-%m-%d"),
-                        "inicio_ciclo": dt_inicio_ciclo.strftime("%Y-%m-%d"),
+                        "inicio_original": dt_inicio.strftime("%d/%m/%Y"),
+                        "vencimento_original": dt_fim.strftime("%d/%m/%Y"),
+                        "inicio_ciclo": dt_inicio_ciclo.strftime("%d/%m/%Y"),
                         "fim_ciclo": (dt_fim_ciclo - timedelta(days=1)).strftime(
-                            "%Y-%m-%d"
+                            "%d/%m/%Y"
                         ),
                         "dias_restantes": dias_restantes,
                         "limite_total": limite_total,
