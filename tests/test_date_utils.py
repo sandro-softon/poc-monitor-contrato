@@ -26,6 +26,22 @@ def test_semester_cycle():
     assert inicio == datetime(2026, 1, 15)
     assert fim == datetime(2026, 7, 15)
 
+def test_quarterly_cycle_after_day():
+    start = datetime(2024, 1, 15)
+    now = datetime(2026, 3, 20)
+    # Ciclo trimestral deve ser 15/01 a 15/04
+    inicio, fim = get_current_cycle(start, "Trimestral", now)
+    assert inicio == datetime(2026, 1, 15)
+    assert fim == datetime(2026, 4, 15)
+
+def test_quarterly_cycle_before_day():
+    start = datetime(2024, 1, 15)
+    now = datetime(2026, 4, 5)
+    # Ainda está no ciclo 15/01 a 15/04
+    inicio, fim = get_current_cycle(start, "Trimestre", now)
+    assert inicio == datetime(2026, 1, 15)
+    assert fim == datetime(2026, 4, 15)
+
 def test_annual_cycle():
     start = datetime(2024, 1, 15)
     now = datetime(2026, 3, 20)

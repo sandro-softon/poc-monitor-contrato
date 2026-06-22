@@ -27,6 +27,7 @@ Este projeto utiliza o `uv` para gerenciamento de ambiente virtual e dependênci
 - **Configuração**: Nunca coloque strings sensíveis (senhas, hosts) diretamente no código. Utilize a classe `Config` em `src/config.py`, que lê do arquivo `.env`.
 - **Imports**: Prefira caminhos absolutos baseados na raiz `src` (ex: `from src.config import Config`). Após `uv pip install -e .`, o Python reconhecerá a pasta `src` automaticamente.
 - **Intervalos de Data**: Para consultas SQL, evite `BETWEEN`. Use a lógica de intervalo aberto: `DATA >= inicio_ciclo AND DATA < fim_ciclo_exclusivo`. A data final exibida ao usuário deve ser `fim_ciclo_exclusivo - 1 dia`.
+- **Frequências de Ciclo**: O cálculo de ciclo suporta mensal (1 mês), trimestral (3 meses), semestral (6 meses) e anual (12 meses).
 - **Banco de Dados**: O consumo é consultado em MySQL via `mysql-connector-python`. A classe `AccessReader` mantém nome legado, mas não acessa banco Access.
 - **Planilha**: A entrada vem do Excel em `Config.EXCEL_PATH`; `Config.EXCEL_SHEET` pode fixar a aba, senão o leitor escolhe a primeira aba com colunas relevantes.
 - **Logs**: O projeto grava logs em console e arquivo (`LOG_DIR`), com retenção configurável por `LOG_RETENTION_DAYS`.

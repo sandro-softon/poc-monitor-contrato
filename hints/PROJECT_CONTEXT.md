@@ -40,6 +40,7 @@ uv run pytest
 - Use limite aberto: `DATA >= inicio_ciclo AND DATA < fim_ciclo_exclusivo`.
 - A data final exibida no relatório é humana/inclusiva: `fim_ciclo_exclusivo - 1 dia`.
 - `AccessReader.get_accesses_by_service()` recebe `end_date` como limite superior exclusivo; não some mais um dia nesse método.
+- Frequências de ciclo suportadas: mensal (1 mês), trimestral (3 meses), semestral (6 meses) e anual (12 meses).
 
 ## Fontes De Dados
 

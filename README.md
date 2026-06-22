@@ -105,6 +105,7 @@ Usada para o serviço **Lote**:
 - Para contratos ilimitados, o relatório mostra limite `∞` e `Consumo do Limite` como `-`.
 - Campos vazios ou `NaN` em `Valor Excedente` são exibidos como `-`.
 - A data final exibida ao usuário é inclusiva (`fim_ciclo_exclusivo - 1 dia`), mas a query usa o limite superior exclusivo.
+- Frequências suportadas para ciclo de corte: mensal, trimestral, semestral e anual.
 - Contadores, limites e percentuais são formatados no padrão brasileiro: milhar com `.` e decimal com `,`.
 - No relatório HTML, a linha `Total` mantém o alinhamento dos valores de serviço e o símbolo `∞` é destacado em negrito.
 
