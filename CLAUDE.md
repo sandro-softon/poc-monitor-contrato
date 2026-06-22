@@ -20,6 +20,7 @@ Este projeto utiliza o `uv` para gerenciamento de ambiente virtual e dependênci
 
 ## Diretrizes de Código
 
+- **Contexto Complementar**: Antes de alterar regras de cálculo, relatórios, consultas SQL ou testes, consulte `hints/PROJECT_CONTEXT.md`.
 - **Padrões de Nomenclatura**: use `snake_case` para variáveis, funções e arquivos; `PascalCase` para classes.
 - **Tipagem**: Sempre que possível, utilize Type Hints (ex: `def func(a: int) -> str:`).
 - **Tratamento de Erros**: Utilize blocos `try-except` em pontos críticos, especialmente em operações de I/O (leitura de arquivos, banco de dados, envio de e-mails).

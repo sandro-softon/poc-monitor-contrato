@@ -14,6 +14,15 @@ O projeto realiza a leitura de uma planilha Excel contendo metadados de contrato
 - `src/notifications/`: Gerenciamento de alertas e envio de e-mails.
 - `src/config.py`: Centralização de variáveis de ambiente e configurações.
 - `docs/`: Documentação adicional e arquivos de suporte.
+- `hints/`: orientações versionadas para agentes de IA e manutenção assistida.
+
+## Orientações Para Agentes
+
+Agentes de IA devem considerar os arquivos em `hints/` antes de alterar regras de cálculo, relatórios, consultas SQL ou testes.
+
+O arquivo principal é `hints/PROJECT_CONTEXT.md`, que registra regras funcionais, comandos seguros e casos já validados.
+
+O diretório `.agent/` permanece ignorado por poder conter arquivos locais do toolkit, configurações ou dados sensíveis.
 
 ## Requisitos
 
