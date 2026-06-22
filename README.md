@@ -63,6 +63,7 @@ DEBUG=False
 
 Cada linha da planilha Excel representa uma unidade de contrato única (`Codigo Instituicao` + `Numero Contrato` + `Serviços Contratados`).
 Para cada linha, o sistema executa uma query `UNION ALL` que apura a volumetria de acesso separada por tipo de serviço.
+O total exibido no relatório é a soma apenas dos serviços contratados naquela linha da planilha.
 
 ### Tabela: `TB_LOG_ACESSOS_CONSOL`
 
@@ -71,7 +72,7 @@ Usada para os serviços **API** e **Individual**:
 | Campo | Uso |
 |---|---|
 | `COD_CONTA` | Código da instituição. Se houver *Cod Compartilhado*, ambos os códigos são filtrados via `IN`. |
-| `DATA_ACESSO` | Filtra o período (operadores `>=` início e `<` o dia seguinte ao fim para inclusividade). |
+| `DATA_ACESSO` | Filtra o período com limite superior exclusivo: `>= inicio_ciclo` e `< fim_ciclo_exclusivo`. |
 | `QT_ACESSOS` | Quantidade somada no período. |
 | `COD_PRODUTO` | `IS NOT NULL` → contabilizado como **API**; `IS NULL` → contabilizado como **Individual**. |
 
@@ -82,8 +83,21 @@ Usada para o serviço **Lote**:
 | Campo | Uso |
 |---|---|
 | `COD_INSTITUICAO` | Código da instituição (mesmo filtro de `IN` da outra tabela). |
-| `DT_CONCLUSAO` | Filtra o período (`IS NOT NULL` e operadores `>=` e `<`). |
+| `DT_CONCLUSAO` | Filtra o período (`IS NOT NULL`, `>= inicio_ciclo` e `< fim_ciclo_exclusivo`). |
 | `QT_LINES` | Quantidade de linhas processadas, somadas como acessos do tipo Lote. |
+
+## Regras de Cálculo
+
+- Os serviços da planilha são normalizados para as chaves `Individual`, `Lote` e `API`.
+- Não use `.title()` para normalizar serviços, pois `API` viraria `Api` e deixaria de somar corretamente.
+- O relatório mostra somente os serviços contratados naquela linha, mesmo que a consulta retorne acessos de outros tipos para a mesma instituição.
+- `acessos_realizados` deve ser igual à soma do `acessos_breakdown` filtrado pelos serviços contratados.
+- Limite `ILIMITADO` na planilha é preservado como ilimitado, não vira `0`.
+- Para contratos ilimitados, o relatório mostra limite `∞` e `Consumo do Limite` como `-`.
+- Campos vazios ou `NaN` em `Valor Excedente` são exibidos como `-`.
+- A data final exibida ao usuário é inclusiva (`fim_ciclo_exclusivo - 1 dia`), mas a query usa o limite superior exclusivo.
+- Contadores, limites e percentuais são formatados no padrão brasileiro: milhar com `.` e decimal com `,`.
+- No relatório HTML, a linha `Total` mantém o alinhamento dos valores de serviço e o símbolo `∞` é destacado em negrito.
 
 ## Uso
 
@@ -93,10 +107,33 @@ Para rodar a rotina de monitoramento:
 ./run.sh
 ```
 
+Execução normal: processa todos os contratos e envia e-mail apenas se houver alerta de vencimento ou consumo.
+
+Para ativar logs detalhados:
+
+```bash
+./run.sh --debug
+```
+
+Para enviar relatório completo de todos os contratos processados:
+
+```bash
+./run.sh --full
+```
+
 Modo de teste por instituição (executa apenas contratos da instituição informada e envia e-mail normalmente):
 
 ```bash
 ./run.sh --test 12345
+```
+
+O modo `--test` também considera `Cod Compartilhado`, força relatório completo para o código filtrado e ativa logs detalhados automaticamente.
+
+Parâmetros podem ser combinados:
+
+```bash
+./run.sh --debug --test 2010062401
+./run.sh --debug --full
 ```
 
 Ou diretamente via `uv`:
@@ -112,6 +149,23 @@ uv run src/main.py --debug
 uv run src/main.py --full
 uv run src/main.py --test 12345
 ```
+
+## Verificação de Resultados
+
+Para validar alterações de cálculo sem enviar e-mail real, prefira testes automatizados e, quando necessário, execução com SMTP mockado em scripts locais.
+
+Comando padrão de testes:
+
+```bash
+uv run pytest
+```
+
+Casos já validados nesta base:
+
+| Instituição | Resultado validado |
+|---|---|
+| `2013032602` | `Individual, API` ilimitado soma `Individual + API`; limite aparece como `∞`; linha `Lote` exibe apenas `Lote`; `Valor Excedente` vazio aparece como `-`. |
+| `2010062401` | `Individual + Lote + API = 71.525`; limite `180.000`; consumo `39,74%`. |
 
 ## Logs
 
@@ -130,12 +184,12 @@ LOG_RETENTION_DAYS=30
 
 ## Desenvolvimento
 
-Para formatar o código:
+Para formatar o código, apenas quando solicitado explicitamente:
 ```bash
 uv run ruff format .
 ```
 
-Para rodar o linter:
+Para rodar o linter, apenas quando a dependência estiver disponível no ambiente:
 ```bash
 uv run ruff check .
 ```

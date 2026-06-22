@@ -118,9 +118,4 @@ class ContractReader:
                 )
             df = df[~nat_mask]
 
-        # Normalizar acessos contratados para numérico (fallback 0)
-        df["acessos contratados"] = pd.to_numeric(
-            df["acessos contratados"], errors="coerce"
-        ).fillna(0)
-
         return df.to_dict("records")

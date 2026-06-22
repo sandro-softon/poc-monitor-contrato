@@ -2,7 +2,7 @@ import logging
 import mysql.connector
 from mysql.connector import Error
 from typing import List, Dict
-from datetime import datetime, timedelta
+from datetime import datetime
 from src.config import Config
 
 
@@ -43,16 +43,16 @@ class AccessReader:
         Args:
             codes: Lista com 1 ou 2 códigos (Codigo Instituicao + Cod Compartilhado).
             start_date: Data início (descartando horas).
-            end_date: Data fim (descartando horas, somando 1 dia para limite exclusivo).
+            end_date: Data fim exclusiva (descartando horas).
 
         Returns:
             Dicionário com chaves 'API', 'Individual', 'Lote' e seus totais.
         """
-        # Abordagem: descartar horas/min/seg e somar 1 dia no end_date
-        # Usa o operador >= inicio e < proximo_dia_fim
+        # Abordagem: descartar horas/min/seg e usar o end_date como limite exclusivo.
+        # Usa o operador >= inicio e < fim.
         try:
             dt_start = datetime.strptime(start_date[:10], "%Y-%m-%d")
-            dt_end = datetime.strptime(end_date[:10], "%Y-%m-%d") + timedelta(days=1)
+            dt_end = datetime.strptime(end_date[:10], "%Y-%m-%d")
 
             start_param = dt_start.strftime("%Y-%m-%d")
             end_param = dt_end.strftime("%Y-%m-%d")
@@ -107,6 +107,7 @@ class AccessReader:
             *codes, start_param, end_param,   # Lote
         )
 
+        cursor = None
         try:
             cursor = conn.cursor(dictionary=True)
             cursor.execute(query, params)
@@ -119,7 +120,8 @@ class AccessReader:
             logger.error("Erro na consulta de acessos para %s: %s", codes, e)
         finally:
             if conn and conn.is_connected():
-                cursor.close()
+                if cursor:
+                    cursor.close()
                 conn.close()
 
         return result

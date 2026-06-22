@@ -18,6 +18,33 @@ def _normalize_code(value) -> str:
     return text
 
 
+def _normalize_service(value: str) -> str:
+    service = str(value).strip().lower()
+    service_map = {
+        "api": "API",
+        "individual": "Individual",
+        "lote": "Lote",
+    }
+    return service_map.get(service, str(value).strip())
+
+
+def _normalize_limit(value):
+    if value is None or pd.isna(value):
+        return 0.0, False
+
+    if isinstance(value, int | float):
+        return float(value), False
+
+    text = str(value).strip()
+    if text.lower() in {"ilimitado", "ilimitada"}:
+        return None, True
+
+    try:
+        return float(text.replace(".", "").replace(",", ".")), False
+    except ValueError:
+        return 0.0, False
+
+
 class ContractAnalyzer:
     def __init__(self, excel_reader, access_reader):
         self.excel_reader = excel_reader
@@ -31,7 +58,6 @@ class ContractAnalyzer:
         now = datetime.now()
 
         for contract in contracts:
-            # ... (previous code remains same until alert check)
             instituicao = _normalize_code(contract.get("Codigo Instituicao", ""))
             nome = contract.get("Nome Instituicao")
             numero_contrato = str(contract.get("Numero Contrato", "")).strip()
@@ -84,15 +110,18 @@ class ContractAnalyzer:
             elif dias_restantes < 0:
                 alerta_vencimento = True
 
-            limite_total = acessos_contrato
+            limite_total, limite_ilimitado = _normalize_limit(acessos_contrato)
             acessos_por_servico = self.access_reader.get_accesses_by_service(
                 codes,
                 dt_inicio_ciclo.strftime("%Y-%m-%d %H:%M:%S"),
                 dt_fim_ciclo.strftime("%Y-%m-%d %H:%M:%S"),
             )
-            servicos_lista = [s.strip().title() for s in servico.split(",")]
+            servicos_lista = [_normalize_service(s) for s in servico.split(",")]
+            acessos_contratados_breakdown = {
+                s: acessos_por_servico.get(s, 0) for s in servicos_lista
+            }
             acessos_realizados = sum(
-                acessos_por_servico.get(s, 0) for s in servicos_lista
+                acessos_contratados_breakdown.get(s, 0) for s in servicos_lista
             )
             if filter_code:
                 logger.info(
@@ -106,7 +135,7 @@ class ContractAnalyzer:
 
             alerta_uso = False
             perc_uso = 0.0
-            if limite_total > 0:
+            if not limite_ilimitado and limite_total > 0:
                 perc_uso = acessos_realizados / limite_total
                 if perc_uso >= Config.ALERT_USAGE_PERCENTAGE:
                     alerta_uso = True
@@ -139,8 +168,9 @@ class ContractAnalyzer:
                         ),
                         "dias_restantes": dias_restantes,
                         "limite_total": limite_total,
+                        "limite_ilimitado": limite_ilimitado,
                         "acessos_realizados": acessos_realizados,
-                        "acessos_breakdown": acessos_por_servico,
+                        "acessos_breakdown": acessos_contratados_breakdown,
                         "perc_uso": round(perc_uso * 100, 2),
                         "valor_excedente": contract.get("Valor Excedente"),
                         "motivos": motivos,

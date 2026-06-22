@@ -1,4 +1,5 @@
 import logging
+import math
 import smtplib
 from email.message import EmailMessage
 from src.config import Config
@@ -8,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 def _format_brl(value) -> str:
-    if value is None:
+    if _is_missing(value):
         return "-"
 
     text = str(value).strip()
@@ -28,6 +29,46 @@ def _format_brl(value) -> str:
 
     formatted = f"{amount:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
     return f"R$ {formatted}"
+
+
+def _is_missing(value) -> bool:
+    return value is None or (isinstance(value, float) and math.isnan(value))
+
+
+def _format_number(value, decimal_places: int = 0) -> str:
+    if _is_missing(value):
+        return "-"
+
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+
+    formatted = f"{number:,.{decimal_places}f}"
+    return formatted.replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def _format_limit(alert: dict) -> str:
+    if alert.get("limite_ilimitado"):
+        return "∞"
+
+    value = alert.get("limite_total")
+    if _is_missing(value):
+        return "-"
+    decimal_places = 0 if float(value).is_integer() else 2
+    return _format_number(value, decimal_places)
+
+
+def _format_usage(alert: dict) -> str:
+    if alert.get("limite_ilimitado"):
+        return "-"
+    return f"{_format_number(alert['perc_uso'], 2)}%"
+
+
+def _format_limit_html(alert: dict) -> str:
+    if alert.get("limite_ilimitado"):
+        return '<span style="font-size: 200%; font-weight: bold; line-height: 0; vertical-align: -0.15em;">∞</span>'
+    return _format_limit(alert)
 
 
 class EmailSender:
@@ -60,6 +101,7 @@ class EmailSender:
         
         for alert in alerts:
             bd = alert.get('acessos_breakdown', {})
+            limit_text = _format_limit(alert)
             body += f"■ INSTITUIÇÃO: {alert['instituicao']} ({alert['codigo']})\n"
             body += f"  Número do Contrato...: {alert.get('contrato', '-')}\n"
             body += f"  Serviço Contratado...: {alert.get('servico', '-')}\n"
@@ -67,11 +109,10 @@ class EmailSender:
             body += f"  Período de Corte.....: {alert['inicio_ciclo']} à {alert['fim_ciclo']} ({alert['dias_restantes']} dias restantes)\n"
             body += f"  Tipo de Corte........: {alert.get('frequencia', '-')}\n"
             body += f"  Acessos no Período...:\n"
-            body += f"       Individual: {bd.get('Individual', 0):>10}\n"
-            body += f"             Lote: {bd.get('Lote', 0):>10}\n"
-            body += f"              API: {bd.get('Api', bd.get('API', 0)):>10}\n"
-            body += f"            Total: {alert['acessos_realizados']:>10}  de  {alert['limite_total']} acessos\n"
-            body += f"  Consumo do Limite....: {alert['perc_uso']}%\n"
+            for service_name, total in bd.items():
+                body += f"  {service_name:>15}: {_format_number(total):>10}\n"
+            body += f"            Total: {_format_number(alert['acessos_realizados']):>10}  de  {limit_text} acessos\n"
+            body += f"  Consumo do Limite....: {_format_usage(alert)}\n"
             body += f"  Valor Excedente......: {_format_brl(alert.get('valor_excedente'))}\n"
             body += "\n" + "-" * 60 + "\n\n"
             
@@ -91,6 +132,13 @@ class EmailSender:
         
         for alert in alerts:
             bd = alert.get('acessos_breakdown', {})
+            limit_html = _format_limit_html(alert)
+            service_rows = "".join(
+                f"""
+                                  <tr><td style="padding: 2px 12px 2px 0; color: #555;">{service_name}:</td><td style="text-align: right; padding: 2px 0; min-width: 70px;">{_format_number(total)}</td><td style="padding: 2px 0 2px 8px;"></td></tr>
+                """
+                for service_name, total in bd.items()
+            )
             # Dinamicamente muda a cor da borda se não for um alerta real
             # Vermelho (#e74c3c) para alertas reais, Azul (#3498db) para apenas relatório
             border_color = "#e74c3c" if any(m in ["Próximo da Data de Corte Final", "Volume Elevado/Excedido"] for m in alert['motivos']) else "#3498db"
@@ -108,17 +156,16 @@ class EmailSender:
                               <td style="padding: 6px 0; color: #555; vertical-align: top;"><strong>Acessos no Período:</strong></td>
                               <td>
                                 <table style="border-collapse: collapse; font-size: 14px; width: auto;">
-                                  <tr><td style="padding: 2px 12px 2px 0; color: #555;">Individual:</td><td style="text-align: right; padding: 2px 0;">{bd.get('Individual', 0)}</td></tr>
-                                  <tr><td style="padding: 2px 12px 2px 0; color: #555;">Lote:</td><td style="text-align: right; padding: 2px 0;">{bd.get('Lote', 0)}</td></tr>
-                                  <tr><td style="padding: 2px 12px 2px 0; color: #555;">API:</td><td style="text-align: right; padding: 2px 0;">{bd.get('Api', bd.get('API', 0))}</td></tr>
-                                  <tr style="border-top: 1px solid #ccc;">
-                                    <td style="padding: 4px 12px 2px 0; color: #333;">Total:</td>
-                                    <td style="text-align: right; padding: 4px 0;">{alert['acessos_realizados']} <span style="color: #888; font-weight: normal;">de {alert['limite_total']}</span></td>
+                                  {service_rows}
+                                  <tr>
+                                    <td style="padding: 2px 12px 2px 0; color: #555; font-weight: bold;">Total:</td>
+                                    <td style="text-align: right; padding: 2px 0; min-width: 70px; font-weight: bold;">{_format_number(alert['acessos_realizados'])}</td>
+                                    <td style="padding: 2px 0 2px 8px; font-weight: bold;">de {limit_html}</td>
                                   </tr>
                                 </table>
                               </td>
                             </tr>
-                            <tr><td style="padding: 6px 0; color: #555;"><strong>Consumo do Limite:</strong></td><td><strong>{alert['perc_uso']}%</strong></td></tr>
+                            <tr><td style="padding: 6px 0; color: #555;"><strong>Consumo do Limite:</strong></td><td><strong>{_format_usage(alert)}</strong></td></tr>
                             <tr><td style="padding: 6px 0; color: #555;"><strong>Valor Excedente:</strong></td><td><strong>{_format_brl(alert.get('valor_excedente'))}</strong></td></tr>
                         </table>
                     </div>
