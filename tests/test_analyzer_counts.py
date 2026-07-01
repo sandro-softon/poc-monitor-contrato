@@ -210,9 +210,11 @@ def test_full_report_email_lists_distinct_cutoff_dates(monkeypatch):
 
 class FakeCursor:
     def __init__(self):
+        self.query = None
         self.params = None
 
     def execute(self, query, params):
+        self.query = query
         self.params = params
 
     def fetchall(self):
@@ -249,6 +251,21 @@ def test_access_reader_uses_end_date_as_exclusive_limit(monkeypatch):
         "123", "2026-01-01", "2026-02-01",
         "123", "2026-01-01", "2026-02-01",
     )
+
+
+def test_access_reader_lote_groups_lines_by_file_hash(monkeypatch):
+    connection = FakeConnection()
+    monkeypatch.setattr(AccessReader, "get_connection", lambda self: connection)
+
+    reader = AccessReader()
+    reader.get_accesses_by_service(["123"], "2026-01-01 00:00:00", "2026-02-01 00:00:00")
+
+    query = connection.cursor_instance.query
+    assert "SELECT 'API' AS tipo" in query
+    assert "SELECT 'Individual' AS tipo" in query
+    assert "SELECT 'Lote' AS tipo, COALESCE(SUM(sub.SumGrouped), 0) AS total" in query
+    assert "SELECT MAX(QT_LINES) AS SumGrouped" in query
+    assert "GROUP BY DS_HASH_ARQUIVO" in query
 
 
 def test_email_formatters_for_unlimited_limit_and_nan_values():

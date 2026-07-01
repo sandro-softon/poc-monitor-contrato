@@ -95,11 +95,14 @@ class AccessReader:
 
             UNION ALL
 
-            SELECT 'Lote' AS tipo, COALESCE(SUM(QT_LINES), 0) AS total
-            FROM TB_POWERMATCH_PROC
-            WHERE COD_INSTITUICAO IN ({placeholders})
-              AND DT_CONCLUSAO IS NOT NULL
-              AND DT_CONCLUSAO >= %s AND DT_CONCLUSAO < %s
+            SELECT 'Lote' AS tipo, COALESCE(SUM(sub.SumGrouped), 0) AS total
+            FROM (
+                SELECT MAX(QT_LINES) AS SumGrouped
+                FROM TB_POWERMATCH_PROC
+                WHERE COD_INSTITUICAO IN ({placeholders})
+                  AND DT_CONCLUSAO >= %s AND DT_CONCLUSAO < %s
+                GROUP BY DS_HASH_ARQUIVO
+            ) sub
         """
 
         # Parâmetros: cada bloco precisa dos codes + datas
