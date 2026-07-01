@@ -1,0 +1,36 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [
+    "CLAUDE.md",
+    "hints/PROJECT_CONTEXT.md",
+    "OPENCODE.md"
+  ],
+  "skills": {
+    "paths": [
+      ".opencode/skills"
+    ]
+  },
+  "tool_output": {
+    "max_lines": 2000,
+    "max_bytes": 51200
+  },
+  "permission": {
+    "read": {
+      "*": "allow",
+      ".env": "deny",
+      ".env.*": "deny",
+      ".env.example": "allow"
+    },
+    "edit": {
+      "*": "allow",
+      ".env": "deny",
+      ".env.*": "deny",
+      ".env.example": "allow",
+      "docs/*.xlsx": "ask"
+    },
+    "bash": {
+      "*": "ask",
+      "uv run python -m pytest": "allow"
+    }
+  }
+}

@@ -56,6 +56,8 @@ class ContractAnalyzer:
         filter_code = _normalize_code(institution_code)
 
         now = datetime.now()
+        today_start = datetime.combine(now.date(), datetime.min.time())
+        data_referencia_datetime = today_start - timedelta(seconds=1)
 
         for contract in contracts:
             instituicao = _normalize_code(contract.get("Codigo Instituicao", ""))
@@ -85,7 +87,16 @@ class ContractAnalyzer:
                 )
                 continue
 
-            dt_inicio_ciclo, dt_fim_ciclo = get_current_cycle(dt_inicio, frequencia, now)
+            dt_inicio_ciclo, dt_fim_ciclo = get_current_cycle(
+                dt_inicio,
+                frequencia,
+                data_referencia_datetime,
+            )
+            dt_fim_consulta = min(
+                dt_fim_ciclo,
+                today_start,
+            )
+            data_referencia_corte = dt_fim_consulta - timedelta(days=1)
             codes = [instituicao]
             if cod_compartilhado_normalizado:
                 codes.append(cod_compartilhado_normalizado)
@@ -98,12 +109,15 @@ class ContractAnalyzer:
                 numero_contrato,
             )
             logger.debug(
-                "[PERÍODO] Ciclo usado para contagem: %s até %s | Códigos: %s",
+                "[CORTE] Referência=%s | Início período=%s | Fim período=%s | Fim contrato=%s | SQL < %s | Códigos: %s",
+                data_referencia_corte.strftime("%Y-%m-%d"),
                 dt_inicio_ciclo.strftime("%Y-%m-%d"),
-                dt_fim_ciclo.strftime("%Y-%m-%d"),
+                data_referencia_corte.strftime("%Y-%m-%d"),
+                dt_fim.strftime("%Y-%m-%d"),
+                dt_fim_consulta.strftime("%Y-%m-%d"),
                 ", ".join(codes),
             )
-            dias_restantes = (dt_fim_ciclo - now).days
+            dias_restantes = (dt_fim_ciclo - data_referencia_datetime).days
             alerta_vencimento = False
             if 0 <= dias_restantes <= Config.ALERT_DAYS_BEFORE_EXPIRATION:
                 alerta_vencimento = True
@@ -162,10 +176,16 @@ class ContractAnalyzer:
                         "frequencia": frequencia.title(),
                         "inicio_original": dt_inicio.strftime("%d/%m/%Y"),
                         "vencimento_original": dt_fim.strftime("%d/%m/%Y"),
-                        "inicio_ciclo": dt_inicio_ciclo.strftime("%d/%m/%Y"),
-                        "fim_ciclo": (dt_fim_ciclo - timedelta(days=1)).strftime(
+                        "data_referencia_corte": data_referencia_corte.strftime(
                             "%d/%m/%Y"
                         ),
+                        "inicio_periodo_corte": dt_inicio_ciclo.strftime("%d/%m/%Y"),
+                        "fim_periodo_corte": data_referencia_corte.strftime(
+                            "%d/%m/%Y"
+                        ),
+                        "fim_contrato": dt_fim.strftime("%d/%m/%Y"),
+                        "inicio_ciclo": dt_inicio_ciclo.strftime("%d/%m/%Y"),
+                        "fim_ciclo": data_referencia_corte.strftime("%d/%m/%Y"),
                         "dias_restantes": dias_restantes,
                         "limite_total": limite_total,
                         "limite_ilimitado": limite_ilimitado,

@@ -102,11 +102,13 @@ class EmailSender:
         for alert in alerts:
             bd = alert.get('acessos_breakdown', {})
             limit_text = _format_limit(alert)
+            inicio_periodo_corte = alert.get("inicio_periodo_corte", alert.get("inicio_ciclo", "-"))
+            fim_periodo_corte = alert.get("fim_periodo_corte", alert.get("fim_ciclo", "-"))
             body += f"■ INSTITUIÇÃO: {alert['instituicao']} ({alert['codigo']})\n"
             body += f"  Número do Contrato...: {alert.get('contrato', '-')}\n"
             body += f"  Serviço Contratado...: {alert.get('servico', '-')}\n"
             body += f"  Motivo do Alerta/Ref.: {', '.join(alert['motivos'])}\n"
-            body += f"  Período de Corte.....: {alert['inicio_ciclo']} à {alert['fim_ciclo']} ({alert['dias_restantes']} dias restantes)\n"
+            body += f"  Período de Corte.....: {inicio_periodo_corte} à {fim_periodo_corte} ({alert['dias_restantes']} dias restantes)\n"
             body += f"  Tipo de Corte........: {alert.get('frequencia', '-')}\n"
             body += f"  Acessos no Período...:\n"
             for service_name, total in bd.items():
@@ -133,6 +135,8 @@ class EmailSender:
         for alert in alerts:
             bd = alert.get('acessos_breakdown', {})
             limit_html = _format_limit_html(alert)
+            inicio_periodo_corte = alert.get("inicio_periodo_corte", alert.get("inicio_ciclo", "-"))
+            fim_periodo_corte = alert.get("fim_periodo_corte", alert.get("fim_ciclo", "-"))
             service_rows = "".join(
                 f"""
                                   <tr><td style="padding: 2px 12px 2px 0; color: #555;">{service_name}:</td><td style="text-align: right; padding: 2px 0; min-width: 70px;">{_format_number(total)}</td><td style="padding: 2px 0 2px 8px;"></td></tr>
@@ -150,7 +154,7 @@ class EmailSender:
                             <tr><td style="padding: 6px 0; width: 180px; color: #555;"><strong>Número do Contrato:</strong></td><td>{alert.get('contrato', '-')}</td></tr>
                             <tr><td style="padding: 6px 0; color: #555;"><strong>Serviço Contratado:</strong></td><td><span style="background-color: #eaf4fb; color: #2980b9; padding: 2px 8px; border-radius: 4px; font-weight: bold;">{alert.get('servico', '-')}</span></td></tr>
                             <tr><td style="padding: 6px 0; color: #555;"><strong>Motivo do Alerta/Ref:</strong></td><td><span style="color: {border_color}; font-weight: bold;">{', '.join(alert['motivos'])}</span></td></tr>
-                            <tr><td style="padding: 6px 0; color: #555;"><strong>Período de Corte:</strong></td><td>{alert['inicio_ciclo']} à {alert['fim_ciclo']} <span style="color: #e67e22;">({alert['dias_restantes']} dias restantes)</span></td></tr>
+                            <tr><td style="padding: 6px 0; color: #555;"><strong>Período de Corte:</strong></td><td>{inicio_periodo_corte} à {fim_periodo_corte} <span style="color: #e67e22;">({alert['dias_restantes']} dias restantes)</span></td></tr>
                             <tr><td style="padding: 6px 0; color: #555;"><strong>Tipo de Corte:</strong></td><td>{alert.get('frequencia', '-')}</td></tr>
                             <tr>
                               <td style="padding: 6px 0; color: #555; vertical-align: top;"><strong>Acessos no Período:</strong></td>

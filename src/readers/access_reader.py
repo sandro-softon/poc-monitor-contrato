@@ -60,10 +60,12 @@ class AccessReader:
             start_param = start_date[:10]
             end_param = end_date[:10]
 
+        effective_end_param = min(end_param, datetime.today().strftime("%Y-%m-%d"))
+
         logger.debug(
             "[SQL PERÍODO] DATA_ACESSO/DT_CONCLUSAO >= %s e < %s | códigos=%s",
             start_param,
-            end_param,
+            effective_end_param,
             ", ".join(codes),
         )
 
@@ -102,9 +104,9 @@ class AccessReader:
 
         # Parâmetros: cada bloco precisa dos codes + datas
         params = (
-            *codes, start_param, end_param,   # API
-            *codes, start_param, end_param,   # Individual
-            *codes, start_param, end_param,   # Lote
+            *codes, start_param, effective_end_param,   # API
+            *codes, start_param, effective_end_param,   # Individual
+            *codes, start_param, effective_end_param,   # Lote
         )
 
         cursor = None
