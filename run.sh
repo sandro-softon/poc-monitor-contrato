@@ -1,5 +1,7 @@
 #!/bin/bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Ignora venv externo para evitar warning do uv
 unset VIRTUAL_ENV
 
@@ -17,7 +19,7 @@ then
 fi
 
 # Executa a rotina via uv repassando argumentos
-PYTHONPATH=. uv run src/main.py "$@"
+PYTHONPATH="$SCRIPT_DIR" uv --directory "$SCRIPT_DIR" run python "$SCRIPT_DIR/src/main.py" "$@"
 
 # Captura o status de saída
 STATUS=$?

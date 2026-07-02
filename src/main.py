@@ -2,6 +2,7 @@ import argparse
 import logging
 from src.config import Config
 from src.readers.excel_reader import ContractReader
+from src.readers.contract_db_reader import ContractDbReader
 from src.readers.access_reader import AccessReader
 from src.core.analyzer import ContractAnalyzer
 from src.notifications.email_sender import EmailSender
@@ -38,6 +39,12 @@ Exemplos de uso:
         metavar="CODIGO_INSTITUICAO",
         help="Executa apenas a instituição informada, exibe detalhes e envia e-mail.",
     )
+    parser.add_argument(
+        "--src",
+        choices=("excel", "db"),
+        default=Config.CONTRACT_SOURCE,
+        help="Fonte dos contratos: excel (padrão) ou db.",
+    )
 
     args = parser.parse_args()
     setup_logging(debug=args.debug or bool(args.test))
@@ -45,11 +52,13 @@ Exemplos de uso:
     logger.info("Iniciando rotina de monitoramento de contratos...")
 
     # 1. Leitura
-    excel_reader = ContractReader(Config.EXCEL_PATH)
+    contract_reader = (
+        ContractDbReader() if args.src == "db" else ContractReader(Config.EXCEL_PATH)
+    )
     access_reader = AccessReader()
 
     # 2. Análise
-    logger.info("Lendo planilha e extraindo dados de consumo...")
+    logger.info("Lendo contratos da fonte '%s' e extraindo dados de consumo...", args.src)
     if args.debug:
         logger.info("[MODO DEBUG ATIVADO]")
     if args.full:
@@ -57,7 +66,7 @@ Exemplos de uso:
     if args.test:
         logger.info("[MODO TESTE ATIVADO] Instituição: %s", args.test)
 
-    analyzer = ContractAnalyzer(excel_reader, access_reader)
+    analyzer = ContractAnalyzer(contract_reader, access_reader)
     full_report = args.full or bool(args.test)
     alerts = analyzer.analyze(full=full_report, institution_code=args.test)
 
