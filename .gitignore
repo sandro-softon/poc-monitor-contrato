@@ -6,9 +6,14 @@ dist/
 wheels/
 *.egg-info
 
+old/
 
 # Agent/toolkit local files
 .agent
+.opencode/node_modules/
+.opencode/package.json
+.opencode/package-lock.json
+.opencode/bun.lock
 
 
 # Virtual environments
@@ -18,3 +23,7 @@ wheels/
 
 # Runtime logs
 logs/
+
+# Web frontend
+web/node_modules/
+web/dist/

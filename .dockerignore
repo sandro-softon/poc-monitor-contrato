@@ -1,0 +1,11 @@
+.env
+.venv/
+.git/
+__pycache__/
+*.pyc
+logs/
+old/
+EchoesVault/
+.opencode/node_modules/
+web/node_modules/
+web/dist/
