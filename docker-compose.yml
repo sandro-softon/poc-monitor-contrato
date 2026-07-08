@@ -11,6 +11,8 @@ services:
       WEB_AUTH_TOKEN: dev-admin-token
     ports:
       - "8000:8000"
+    volumes:
+      - ./src:/app/src
 
   web:
     build:
@@ -22,3 +24,6 @@ services:
       - "5173:5173"
     depends_on:
       - api
+    volumes:
+      - ./web:/app
+      - /app/node_modules

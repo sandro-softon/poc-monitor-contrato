@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import dayjs from 'dayjs'
 import {
   Alert,
   App as AntApp,
@@ -6,6 +7,7 @@ import {
   Card,
   Checkbox,
   ConfigProvider,
+  DatePicker,
   Drawer,
   Form,
   Input,
@@ -21,6 +23,7 @@ import {
 } from 'antd'
 import {
   BankOutlined,
+  DeleteOutlined,
   EditOutlined,
   FileTextOutlined,
   LogoutOutlined,
@@ -210,12 +213,12 @@ function App() {
     if (!editingContract) return
     setSavingContract(true)
     try {
-      const body = { ...values, codigo: undefined }
-      for (const key of Object.keys(body)) {
-        if (body[key] === '' || body[key] === null || body[key] === undefined) {
-          delete body[key]
-        }
+      const body = {}
+      for (const [key, value] of Object.entries(values)) {
+        if (value === '' || value === null || value === undefined) continue
+        body[key] = value?.format ? value.format('YYYY-MM-DD') : value
       }
+      delete body.codigo
       body.servicos = editingContract.servicos.map((s) => {
         const item = {
           servico: s.servico,
@@ -259,11 +262,10 @@ function App() {
     if (!editingInst) return
     setSavingInst(true)
     try {
-      const body = { ...values }
-      for (const key of Object.keys(body)) {
-        if (body[key] === '' || body[key] === null || body[key] === undefined) {
-          delete body[key]
-        }
+      const body = {}
+      for (const [key, value] of Object.entries(values)) {
+        if (value === '' || value === null || value === undefined) continue
+        body[key] = value?.format ? value.format('YYYY-MM-DD') : value
       }
       const response = await fetch(`/api/institutions/${editingInst.codigo_instituicao}`, {
         method: 'PUT',
@@ -382,6 +384,7 @@ function App() {
           onChange={(v) => handleServicoChange(index, 'num_ac_contratados', v)}
           min={0}
           disabled={record.fl_acessos_ilimitados}
+          controls={false}
           style={{ width: '100%' }}
         />
       ),
@@ -409,6 +412,7 @@ function App() {
           onChange={(v) => handleServicoChange(index, 'valor_excedente', v)}
           min={0}
           step={0.01}
+          controls={false}
           style={{ width: '100%' }}
         />
       ),
@@ -419,15 +423,15 @@ function App() {
       width: 50,
       render: (_, record, index) => (
         <Button
+          type="text"
           size="small"
           danger
+          icon={<DeleteOutlined />}
           onClick={() => {
             const servicos = editingContract.servicos.filter((_, i) => i !== index)
             setEditingContract({ ...editingContract, servicos })
           }}
-        >
-          X
-        </Button>
+        />
       ),
     },
   ]
@@ -621,12 +625,12 @@ function App() {
                           layout="vertical"
                           initialValues={{
                             numero_contrato: editingContract.numero_contrato,
-                            dt_ini: editingContract.dt_ini ? editingContract.dt_ini.split('T')[0] : '',
-                            dt_fim: editingContract.dt_fim ? editingContract.dt_fim.split('T')[0] : '',
+                            dt_ini: editingContract.dt_ini ? dayjs(editingContract.dt_ini.split('T')[0]) : null,
+                            dt_fim: editingContract.dt_fim ? dayjs(editingContract.dt_fim.split('T')[0]) : null,
                             cod_compartilhado: editingContract.cod_compartilhado,
                             dt_corte_inicial: editingContract.dt_corte_inicial
-                              ? editingContract.dt_corte_inicial.split('T')[0]
-                              : '',
+                              ? dayjs(editingContract.dt_corte_inicial.split('T')[0])
+                              : null,
                             frequencia_corte: editingContract.frequencia_corte,
                           }}
                           onFinish={handleSaveContract}
@@ -654,16 +658,15 @@ function App() {
 
                           <div style={{ display: 'flex', gap: 12 }}>
                             <Form.Item name="dt_ini" label="Data Início" style={{ flex: 1 }}>
-                              <Input placeholder="YYYY-MM-DD" />
+                              <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} allowClear={false} />
                             </Form.Item>
                             <Form.Item name="dt_fim" label="Data Fim" style={{ flex: 1 }}>
-                              <Input placeholder="YYYY-MM-DD" />
+                              <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} allowClear={false} />
+                            </Form.Item>
+                            <Form.Item name="dt_corte_inicial" label="Corte Inicial" style={{ flex: 1 }}>
+                              <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} allowClear={false} />
                             </Form.Item>
                           </div>
-
-                          <Form.Item name="dt_corte_inicial" label="Data Corte Inicial">
-                            <Input placeholder="YYYY-MM-DD" />
-                          </Form.Item>
 
                           <Form.Item name="frequencia_corte" label="Frequência">
                             <Select
@@ -813,12 +816,12 @@ function App() {
                           initialValues={{
                             nome_instituicao: editingInst.nome_instituicao,
                             numero_contrato: editingInst.numero_contrato,
-                            dt_ini: editingInst.dt_ini ? editingInst.dt_ini.split('T')[0] : '',
-                            dt_fim: editingInst.dt_fim ? editingInst.dt_fim.split('T')[0] : '',
+                            dt_ini: editingInst.dt_ini ? dayjs(editingInst.dt_ini.split('T')[0]) : null,
+                            dt_fim: editingInst.dt_fim ? dayjs(editingInst.dt_fim.split('T')[0]) : null,
                             cod_compartilhado: editingInst.cod_compartilhado,
                             dt_corte_inicial: editingInst.dt_corte_inicial
-                              ? editingInst.dt_corte_inicial.split('T')[0]
-                              : '',
+                              ? dayjs(editingInst.dt_corte_inicial.split('T')[0])
+                              : null,
                             frequencia_corte: editingInst.frequencia_corte,
                             status: editingInst.status,
                             num_ac_contratados: editingInst.num_ac_contratados,
@@ -850,17 +853,19 @@ function App() {
                           <Form.Item name="numero_contrato" label="Número do Contrato">
                             <Input />
                           </Form.Item>
-                          <Form.Item name="dt_ini" label="Data Início">
-                            <Input placeholder="YYYY-MM-DD" />
-                          </Form.Item>
-                          <Form.Item name="dt_fim" label="Data Fim">
-                            <Input placeholder="YYYY-MM-DD" />
-                          </Form.Item>
+                          <div style={{ display: 'flex', gap: 12 }}>
+                            <Form.Item name="dt_ini" label="Data Início" style={{ flex: 1 }}>
+                              <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} allowClear={false} />
+                            </Form.Item>
+                            <Form.Item name="dt_fim" label="Data Fim" style={{ flex: 1 }}>
+                              <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} allowClear={false} />
+                            </Form.Item>
+                            <Form.Item name="dt_corte_inicial" label="Corte Inicial" style={{ flex: 1 }}>
+                              <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} allowClear={false} />
+                            </Form.Item>
+                          </div>
                           <Form.Item name="cod_compartilhado" label="Código Compartilhado">
                             <InputNumber style={{ width: '100%' }} min={0} />
-                          </Form.Item>
-                          <Form.Item name="dt_corte_inicial" label="Data Corte Inicial">
-                            <Input placeholder="YYYY-MM-DD" />
                           </Form.Item>
                           <Form.Item name="frequencia_corte" label="Frequência">
                             <Select
