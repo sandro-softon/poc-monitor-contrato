@@ -1,4 +1,6 @@
 import os
+from urllib.parse import quote_plus
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -9,6 +11,10 @@ class Config:
     DB_USER = os.getenv("DB_USER", "root")
     DB_PASS = os.getenv("DB_PASS", "")
     DB_NAME = os.getenv("DB_DATABASE", "meubanco")
+    DATABASE_URL = os.getenv(
+        "DATABASE_URL",
+        f"mysql+pymysql://{DB_USER}:{quote_plus(DB_PASS)}@{DB_HOST}/{DB_NAME}",
+    )
     
     # Email
     SMTP_HOST = os.getenv("SMTP_HOST", "127.0.0.1")

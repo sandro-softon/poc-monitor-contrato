@@ -1,10 +1,11 @@
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
 
+from src.db.session import get_db
 from src.web_api.auth import LoginRequest, LoginResponse, login, require_auth
 from src.web_api.contracts import ContractRepository
 from src.web_api.institutions import InstitutionRepository
-
 
 app = FastAPI(title="Monitor de Contratos API")
 
@@ -34,14 +35,11 @@ def list_contracts(
     monitorar: int | None = Query(default=None, ge=0, le=1),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
+    db: Session = Depends(get_db),
 ):
     try:
-        return ContractRepository().list_contracts(
-            q=q,
-            service=service,
-            monitorar=monitorar,
-            page=page,
-            page_size=page_size,
+        return ContractRepository(db).list_contracts(
+            q=q, service=service, monitorar=monitorar, page=page, page_size=page_size
         )
     except RuntimeError as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -52,17 +50,23 @@ def list_institutions(
     q: str | None = None,
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
+    db: Session = Depends(get_db),
 ):
     try:
-        return InstitutionRepository().list_institutions(q=q, page=page, page_size=page_size)
+        return InstitutionRepository(db).list_institutions(
+            q=q, page=page, page_size=page_size
+        )
     except RuntimeError as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/api/institutions/{codigo}", dependencies=[Depends(require_auth)])
-def get_institution(codigo: int):
+def get_institution(
+    codigo: int,
+    db: Session = Depends(get_db),
+):
     try:
-        inst = InstitutionRepository().get_institution(codigo)
+        inst = InstitutionRepository(db).get_institution(codigo)
         if inst is None:
             raise HTTPException(status_code=404, detail="Instituição não encontrada")
         return inst
@@ -71,8 +75,12 @@ def get_institution(codigo: int):
 
 
 @app.put("/api/institutions/{codigo}", dependencies=[Depends(require_auth)])
-def update_institution(codigo: int, data: dict):
+def update_institution(
+    codigo: int,
+    data: dict,
+    db: Session = Depends(get_db),
+):
     try:
-        return InstitutionRepository().update_institution(codigo, data)
+        return InstitutionRepository(db).update_institution(codigo, data)
     except RuntimeError as e:
         raise HTTPException(status_code=500, detail=str(e)) from e

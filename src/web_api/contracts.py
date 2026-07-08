@@ -1,12 +1,7 @@
-from datetime import date, datetime
-from decimal import Decimal
-from typing import Any
+from sqlalchemy import cast, func, select, String
+from sqlalchemy.orm import Session
 
-import mysql.connector
-from mysql.connector import Error
-
-from src.config import Config
-
+from src.db.models import Contrato, Instituicao
 
 SERVICE_ORDER = ("Individual", "Lote", "API")
 SERVICE_MAP = {
@@ -25,28 +20,41 @@ def normalize_services(value: str) -> str:
     return ", ".join(service for service in SERVICE_ORDER if service in services)
 
 
-def _json_value(value: Any):
-    if isinstance(value, Decimal):
-        return int(value) if value == value.to_integral_value() else float(value)
-    if isinstance(value, datetime | date):
-        return value.isoformat()
-    return value
+def _to_dict(row) -> dict:
+    contrato, instituicao = row
+    return {
+        "id": contrato.id_contrato,
+        "codigo_instituicao": int(contrato.codigo_instituicao),
+        "nome_instituicao": instituicao.nome_instituicao,
+        "numero_contrato": instituicao.numero_contrato,
+        "servicos_contratados": contrato.servicos_contratados,
+        "cod_compartilhado": (
+            int(contrato.cod_compartilhado)
+            if contrato.cod_compartilhado is not None
+            else None
+        ),
+        "dt_ini": instituicao.dt_ini.isoformat() if instituicao.dt_ini else None,
+        "dt_fim": instituicao.dt_fim.isoformat() if instituicao.dt_fim else None,
+        "dt_corte_inicial": (
+            contrato.dt_corte_inicial.isoformat()
+            if contrato.dt_corte_inicial
+            else None
+        ),
+        "frequencia_corte": contrato.frequencia_corte,
+        "num_ac_contratados": contrato.num_ac_contratados,
+        "fl_acessos_ilimitados": bool(contrato.fl_acessos_ilimitados),
+        "valor_excedente": (
+            float(contrato.valor_excedente)
+            if contrato.valor_excedente is not None
+            else None
+        ),
+        "fl_monitorar_contrato": bool(contrato.fl_monitorar_contrato),
+    }
 
 
 class ContractRepository:
-    def __init__(self):
-        self.host = Config.DB_HOST
-        self.user = Config.DB_USER
-        self.password = Config.DB_PASS
-        self.database = Config.DB_NAME
-
-    def get_connection(self):
-        return mysql.connector.connect(
-            host=self.host,
-            user=self.user,
-            password=self.password,
-            database=self.database,
-        )
+    def __init__(self, db: Session):
+        self.db = db
 
     def list_contracts(
         self,
@@ -60,78 +68,51 @@ class ContractRepository:
         page_size = min(max(page_size, 1), 100)
         offset = (page - 1) * page_size
 
-        where = []
-        params: list[Any] = []
+        base = select(Contrato).join(Instituicao)
 
         if q:
             like = f"%{q.strip()}%"
-            where.append(
-                "(CAST(c.COD_INSTITUICAO AS CHAR) LIKE %s "
-                "OR i.NOME_INSTITUICAO LIKE %s "
-                "OR i.NUM_CONTRATO LIKE %s)"
+            base = base.where(
+                cast(Contrato.codigo_instituicao, String).like(like)
+                | Instituicao.nome_instituicao.like(like)
+                | Instituicao.numero_contrato.like(like)
             )
-            params.extend([like, like, like])
 
         normalized_service = normalize_services(service or "")
         if normalized_service:
             for item in normalized_service.split(", "):
-                where.append("FIND_IN_SET(%s, REPLACE(c.SERVICOS_CONTRATADOS, ', ', ','))")
-                params.append(item)
+                base = base.where(
+                    func.find_in_set(
+                        item,
+                        func.replace(
+                            Contrato.servicos_contratados, ", ", ","
+                        ),
+                    )
+                )
 
         if monitorar is not None:
-            where.append("c.FL_MONITORAR_CONTRATO = %s")
-            params.append(monitorar)
+            base = base.where(Contrato.fl_monitorar_contrato == monitorar)
 
-        where_sql = f"WHERE {' AND '.join(where)}" if where else ""
+        total = self.db.scalar(
+            select(func.count()).select_from(base.subquery())
+        )
 
-        count_sql = f"""
-            SELECT COUNT(*) AS total
-            FROM TB_CONTRATO c
-            JOIN TB_INSTITUICAO i
-              ON i.COD_INSTITUICAO = c.COD_INSTITUICAO
-            {where_sql}
-        """
-        data_sql = f"""
-            SELECT
-                c.ID_CONTRATO AS id,
-                c.COD_INSTITUICAO AS codigo_instituicao,
-                i.NOME_INSTITUICAO AS nome_instituicao,
-                i.NUM_CONTRATO AS numero_contrato,
-                c.SERVICOS_CONTRATADOS AS servicos_contratados,
-                c.COD_COMPARTILHADO AS cod_compartilhado,
-                i.DT_INI AS dt_ini,
-                i.DT_FIM AS dt_fim,
-                c.DT_CORTE_INICIAL AS dt_corte_inicial,
-                c.FREQUENCIA_CORTE AS frequencia_corte,
-                c.NUM_AC_CONTRATADOS AS num_ac_contratados,
-                c.FL_ACESSOS_ILIMITADOS AS fl_acessos_ilimitados,
-                c.VALOR_EXCEDENTE AS valor_excedente,
-                c.FL_MONITORAR_CONTRATO AS fl_monitorar_contrato
-            FROM TB_CONTRATO c
-            JOIN TB_INSTITUICAO i
-              ON i.COD_INSTITUICAO = c.COD_INSTITUICAO
-            {where_sql}
-            ORDER BY i.NOME_INSTITUICAO, i.NUM_CONTRATO, c.SERVICOS_CONTRATADOS
-            LIMIT %s OFFSET %s
-        """
+        rows = (
+            self.db.execute(
+                base.order_by(
+                    Instituicao.nome_instituicao,
+                    Instituicao.numero_contrato,
+                    Contrato.servicos_contratados,
+                )
+                .offset(offset)
+                .limit(page_size)
+            )
+            .all()
+        )
 
-        conn = self.get_connection()
-        try:
-            cursor = conn.cursor(dictionary=True)
-            cursor.execute(count_sql, params)
-            total = int(cursor.fetchone()["total"])
-            cursor.execute(data_sql, [*params, page_size, offset])
-            items = [
-                {key: _json_value(value) for key, value in row.items()}
-                for row in cursor.fetchall()
-            ]
-            return {"items": items, "total": total, "page": page, "page_size": page_size}
-        except Error as e:
-            raise RuntimeError(f"Erro ao consultar contratos: {e}") from e
-        finally:
-            try:
-                cursor.close()
-            except Exception:
-                pass
-            if conn and conn.is_connected():
-                conn.close()
+        return {
+            "items": [_to_dict(row) for row in rows],
+            "total": total or 0,
+            "page": page,
+            "page_size": page_size,
+        }
