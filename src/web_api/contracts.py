@@ -1,4 +1,4 @@
-from sqlalchemy import cast, func, select, String, update
+from sqlalchemy import cast, delete as sa_delete, func, insert, select, String, update
 from sqlalchemy.orm import Session
 
 from src.db.models import Contrato, Instituicao
@@ -175,7 +175,6 @@ class ContractRepository:
             "cod_compartilhado": "COD_COMPARTILHADO",
             "dt_corte_inicial": "DT_CORTE_INICIAL",
             "frequencia_corte": "FREQUENCIA_CORTE",
-            "status": "STATUS",
         }
 
         general_values = {
@@ -194,7 +193,7 @@ class ContractRepository:
             sync_values = {
                 db_col: data[json_key]
                 for json_key, db_col in allowed_general.items()
-                if json_key in data and db_col != "STATUS"
+                if json_key in data
             }
             if sync_values:
                 self.db.execute(
@@ -205,26 +204,65 @@ class ContractRepository:
                 self.db.commit()
 
         if "servicos" in data and isinstance(data["servicos"], list):
+            incoming_ids = set()
             for svc_data in data["servicos"]:
                 svc_id = svc_data.get("id")
-                if not svc_id:
-                    continue
-                svc_values = {}
-                for field in (
-                    "servico",
-                    "num_ac_contratados",
-                    "fl_acessos_ilimitados",
-                    "valor_excedente",
-                    "fl_monitorar_contrato",
-                ):
-                    if field in svc_data:
-                        svc_values[field] = svc_data[field]
-                if svc_values:
-                    self.db.execute(
-                        update(Contrato)
-                        .where(Contrato.id_contrato == svc_id)
-                        .values(**svc_values)
-                    )
+                if svc_id and svc_id > 0:
+                    incoming_ids.add(svc_id)
+                    db_col_map = {
+                        "servico": "SERVICOS_CONTRATADOS",
+                        "num_ac_contratados": "NUM_AC_CONTRATADOS",
+                        "fl_acessos_ilimitados": "FL_ACESSOS_ILIMITADOS",
+                        "valor_excedente": "VALOR_EXCEDENTE",
+                    }
+                    svc_values = {}
+                    for json_key, db_col in db_col_map.items():
+                        if json_key in svc_data:
+                            svc_values[db_col] = svc_data[json_key]
+                    if svc_values:
+                        self.db.execute(
+                            update(Contrato)
+                            .where(Contrato.id_contrato == svc_id)
+                            .values(**svc_values)
+                        )
+                        self.db.commit()
+                elif svc_id is None or svc_id == 0:
+                    servico = svc_data.get("servico", "")
+                    if not servico:
+                        continue
+                    inst = self.db.get(Instituicao, codigo)
+                    insert_values = {
+                        "COD_INSTITUICAO": codigo,
+                        "NUM_CONTRATO": inst.numero_contrato if inst else None,
+                        "DT_INI": inst.dt_ini if inst else None,
+                        "DT_FIM": inst.dt_fim if inst else None,
+                        "COD_COMPARTILHADO": inst.cod_compartilhado if inst else None,
+                        "DT_CORTE_INICIAL": inst.dt_corte_inicial if inst else None,
+                        "FREQUENCIA_CORTE": inst.frequencia_corte if inst else None,
+                        "SERVICOS_CONTRATADOS": servico,
+                        "NUM_AC_CONTRATADOS": svc_data.get("num_ac_contratados"),
+                        "FL_ACESSOS_ILIMITADOS": svc_data.get("fl_acessos_ilimitados", 0),
+                        "VALOR_EXCEDENTE": svc_data.get("valor_excedente"),
+                        "FL_MONITORAR_CONTRATO": svc_data.get("fl_monitorar_contrato", 1),
+                    }
+                    self.db.execute(insert(Contrato).values(**insert_values))
                     self.db.commit()
+
+            existing_ids = {
+                row.id_contrato
+                for row in self.db.execute(
+                    select(Contrato.id_contrato).where(
+                        Contrato.codigo_instituicao == codigo
+                    )
+                )
+                .scalars()
+                .all()
+            }
+            to_delete = existing_ids - incoming_ids
+            if to_delete:
+                self.db.execute(
+                    sa_delete(Contrato).where(Contrato.id_contrato.in_(to_delete))
+                )
+                self.db.commit()
 
         return self.get_contract_detail(codigo)

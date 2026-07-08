@@ -216,14 +216,16 @@ function App() {
           delete body[key]
         }
       }
-      body.servicos = editingContract.servicos.map((s) => ({
-        id: s.id,
-        servico: s.servico,
-        num_ac_contratados: s.num_ac_contratados,
-        fl_acessos_ilimitados: s.fl_acessos_ilimitados ? 1 : 0,
-        valor_excedente: s.valor_excedente,
-        fl_monitorar_contrato: s.fl_monitorar_contrato ? 1 : 0,
-      }))
+      body.servicos = editingContract.servicos.map((s) => {
+        const item = {
+          servico: s.servico,
+          num_ac_contratados: s.num_ac_contratados,
+          fl_acessos_ilimitados: s.fl_acessos_ilimitados ? 1 : 0,
+          valor_excedente: s.valor_excedente,
+        }
+        if (s.id) item.id = s.id
+        return item
+      })
       const response = await fetch(`/api/contracts/${editingContract.codigo_instituicao}`, {
         method: 'PUT',
         headers: { ...authHeaders(token), 'Content-Type': 'application/json' },
@@ -360,10 +362,13 @@ function App() {
       dataIndex: 'servico',
       key: 'servico',
       width: 120,
-      render: (value) => (
-        <Tag color={value === 'API' ? 'blue' : value === 'Lote' ? 'cyan' : 'purple'}>
-          {value}
-        </Tag>
+      render: (value, record, index) => (
+        <Select
+          value={value}
+          onChange={(v) => handleServicoChange(index, 'servico', v)}
+          style={{ width: '100%' }}
+          options={['Individual', 'Lote', 'API'].map((s) => ({ value: s, label: s }))}
+        />
       ),
     },
     {
@@ -385,7 +390,7 @@ function App() {
       title: 'Ilimitado',
       dataIndex: 'fl_acessos_ilimitados',
       key: 'fl_acessos_ilimitados',
-      width: 90,
+      width: 80,
       render: (value, record, index) => (
         <Checkbox
           checked={value}
@@ -397,7 +402,7 @@ function App() {
       title: 'Valor Excedente',
       dataIndex: 'valor_excedente',
       key: 'valor_excedente',
-      width: 140,
+      width: 130,
       render: (value, record, index) => (
         <InputNumber
           value={value}
@@ -409,15 +414,20 @@ function App() {
       ),
     },
     {
-      title: 'Monitorar',
-      dataIndex: 'fl_monitorar_contrato',
-      key: 'fl_monitorar_contrato',
-      width: 90,
-      render: (value, record, index) => (
-        <Checkbox
-          checked={value}
-          onChange={(e) => handleServicoChange(index, 'fl_monitorar_contrato', e.target.checked)}
-        />
+      title: '',
+      key: 'actions',
+      width: 50,
+      render: (_, record, index) => (
+        <Button
+          size="small"
+          danger
+          onClick={() => {
+            const servicos = editingContract.servicos.filter((_, i) => i !== index)
+            setEditingContract({ ...editingContract, servicos })
+          }}
+        >
+          X
+        </Button>
       ),
     },
   ]
@@ -599,7 +609,7 @@ function App() {
                     <Drawer
                       title={
                         editingContract
-                          ? `Editar Contrato - ${editingContract.nome_instituicao} (${editingContract.codigo_instituicao})`
+                          ? `${editingContract.nome_instituicao} (${editingContract.codigo_instituicao})`
                           : 'Carregando...'
                       }
                       open={contractDrawerOpen}
@@ -618,34 +628,43 @@ function App() {
                               ? editingContract.dt_corte_inicial.split('T')[0]
                               : '',
                             frequencia_corte: editingContract.frequencia_corte,
-                            status: editingContract.status,
                           }}
                           onFinish={handleSaveContract}
                         >
                           <Text strong style={{ display: 'block', marginBottom: 8 }}>
                             Dados do Contrato
                           </Text>
-                          <Form.Item label="Código Instituição">
-                            <Input disabled value={editingContract.codigo_instituicao} />
-                          </Form.Item>
-                          <Form.Item label="Nome Instituição">
+
+                          <div style={{ display: 'flex', gap: 12 }}>
+                            <Form.Item label="Código" style={{ flex: 1 }}>
+                              <Input disabled value={editingContract.codigo_instituicao} />
+                            </Form.Item>
+                            <Form.Item name="cod_compartilhado" label="Cod. Compartilhado" style={{ flex: 1 }}>
+                              <InputNumber style={{ width: '100%' }} min={0} />
+                            </Form.Item>
+                          </div>
+
+                          <Form.Item label="Instituição">
                             <Input disabled value={editingContract.nome_instituicao} />
                           </Form.Item>
+
                           <Form.Item name="numero_contrato" label="Número do Contrato">
                             <Input />
                           </Form.Item>
-                          <Form.Item name="dt_ini" label="Data Início">
-                            <Input placeholder="YYYY-MM-DD" />
-                          </Form.Item>
-                          <Form.Item name="dt_fim" label="Data Fim">
-                            <Input placeholder="YYYY-MM-DD" />
-                          </Form.Item>
-                          <Form.Item name="cod_compartilhado" label="Código Compartilhado">
-                            <InputNumber style={{ width: '100%' }} min={0} />
-                          </Form.Item>
+
+                          <div style={{ display: 'flex', gap: 12 }}>
+                            <Form.Item name="dt_ini" label="Data Início" style={{ flex: 1 }}>
+                              <Input placeholder="YYYY-MM-DD" />
+                            </Form.Item>
+                            <Form.Item name="dt_fim" label="Data Fim" style={{ flex: 1 }}>
+                              <Input placeholder="YYYY-MM-DD" />
+                            </Form.Item>
+                          </div>
+
                           <Form.Item name="dt_corte_inicial" label="Data Corte Inicial">
                             <Input placeholder="YYYY-MM-DD" />
                           </Form.Item>
+
                           <Form.Item name="frequencia_corte" label="Frequência">
                             <Select
                               options={['Mensal', 'Trimestral', 'Semestral', 'Anual'].map((v) => ({
@@ -654,24 +673,43 @@ function App() {
                               }))}
                             />
                           </Form.Item>
-                          <Form.Item name="status" label="Status">
-                            <Select
-                              options={[
-                                { value: 1, label: 'Ativo' },
-                                { value: 0, label: 'Inativo' },
-                              ]}
-                            />
-                          </Form.Item>
 
                           <Text strong style={{ display: 'block', marginBottom: 8, marginTop: 16 }}>
                             Serviços
                           </Text>
+
+                          <div style={{ marginBottom: 8 }}>
+                            <Button
+                              size="small"
+                              type="dashed"
+                              onClick={() => {
+                                const servicos = editingContract.servicos || []
+                                setEditingContract({
+                                  ...editingContract,
+                                  servicos: [
+                                    ...servicos,
+                                    {
+                                      id: null,
+                                      servico: 'Individual',
+                                      num_ac_contratados: null,
+                                      fl_acessos_ilimitados: false,
+                                      valor_excedente: null,
+                                    },
+                                  ],
+                                })
+                              }}
+                            >
+                              + Adicionar Serviço
+                            </Button>
+                          </div>
+
                           <Table
-                            rowKey="id"
+                            rowKey={(r) => r.id ?? `new-${r.servico}-${Math.random()}`
+                            }
                             columns={servicoColumns}
                             dataSource={editingContract.servicos}
                             pagination={false}
-                            scroll={{ x: 600 }}
+                            scroll={{ x: 530 }}
                             size="small"
                           />
 
