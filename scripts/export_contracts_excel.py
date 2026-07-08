@@ -66,17 +66,17 @@ def _fetch_contracts() -> list[dict[str, Any]]:
             c.COD_COMPARTILHADO,
             i.NOME_INSTITUICAO,
             c.SERVICOS_CONTRATADOS,
-            c.NUM_CONTRATO,
+            i.NUM_CONTRATO,
             c.VALOR_EXCEDENTE,
             c.DT_CORTE_INICIAL,
-            c.DT_FIM,
+            i.DT_FIM,
             c.FREQUENCIA_CORTE,
             c.NUM_AC_CONTRATADOS,
             c.FL_ACESSOS_ILIMITADOS
         FROM TB_CONTRATO c
         JOIN TB_INSTITUICAO i
           ON i.COD_INSTITUICAO = c.COD_INSTITUICAO
-        ORDER BY c.COD_INSTITUICAO, c.NUM_CONTRATO, c.SERVICOS_CONTRATADOS
+        ORDER BY c.COD_INSTITUICAO, i.NUM_CONTRATO, c.SERVICOS_CONTRATADOS
     """
     conn = None
     cursor = None

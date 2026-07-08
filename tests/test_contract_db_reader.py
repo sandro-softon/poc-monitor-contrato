@@ -71,3 +71,5 @@ def test_contract_db_reader_maps_database_rows(monkeypatch):
         }
     ]
     assert "FROM TB_CONTRATO c" in connection.cursor_instance.query
+    assert "i.NUM_CONTRATO" in connection.cursor_instance.query
+    assert "i.DT_FIM" in connection.cursor_instance.query

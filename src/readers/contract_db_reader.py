@@ -34,11 +34,11 @@ class ContractDbReader:
             SELECT
                 c.COD_INSTITUICAO,
                 i.NOME_INSTITUICAO,
-                c.NUM_CONTRATO,
+                i.NUM_CONTRATO,
                 c.SERVICOS_CONTRATADOS,
                 c.COD_COMPARTILHADO,
                 c.DT_CORTE_INICIAL,
-                c.DT_FIM,
+                i.DT_FIM,
                 c.FL_ACESSOS_ILIMITADOS,
                 c.NUM_AC_CONTRATADOS,
                 c.FREQUENCIA_CORTE,
@@ -47,7 +47,7 @@ class ContractDbReader:
             JOIN TB_INSTITUICAO i
               ON i.COD_INSTITUICAO = c.COD_INSTITUICAO
             WHERE c.FL_MONITORAR_CONTRATO = 1
-            ORDER BY c.COD_INSTITUICAO, c.NUM_CONTRATO, c.SERVICOS_CONTRATADOS
+            ORDER BY c.COD_INSTITUICAO, i.NUM_CONTRATO, c.SERVICOS_CONTRATADOS
         """
 
         conn = self.get_connection()

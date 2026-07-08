@@ -68,7 +68,7 @@ class ContractRepository:
             where.append(
                 "(CAST(c.COD_INSTITUICAO AS CHAR) LIKE %s "
                 "OR i.NOME_INSTITUICAO LIKE %s "
-                "OR c.NUM_CONTRATO LIKE %s)"
+                "OR i.NUM_CONTRATO LIKE %s)"
             )
             params.extend([like, like, like])
 
@@ -96,11 +96,11 @@ class ContractRepository:
                 c.ID_CONTRATO AS id,
                 c.COD_INSTITUICAO AS codigo_instituicao,
                 i.NOME_INSTITUICAO AS nome_instituicao,
-                c.NUM_CONTRATO AS numero_contrato,
+                i.NUM_CONTRATO AS numero_contrato,
                 c.SERVICOS_CONTRATADOS AS servicos_contratados,
                 c.COD_COMPARTILHADO AS cod_compartilhado,
-                c.DT_INI AS dt_ini,
-                c.DT_FIM AS dt_fim,
+                i.DT_INI AS dt_ini,
+                i.DT_FIM AS dt_fim,
                 c.DT_CORTE_INICIAL AS dt_corte_inicial,
                 c.FREQUENCIA_CORTE AS frequencia_corte,
                 c.NUM_AC_CONTRATADOS AS num_ac_contratados,
@@ -111,7 +111,7 @@ class ContractRepository:
             JOIN TB_INSTITUICAO i
               ON i.COD_INSTITUICAO = c.COD_INSTITUICAO
             {where_sql}
-            ORDER BY i.NOME_INSTITUICAO, c.NUM_CONTRATO, c.SERVICOS_CONTRATADOS
+            ORDER BY i.NOME_INSTITUICAO, i.NUM_CONTRATO, c.SERVICOS_CONTRATADOS
             LIMIT %s OFFSET %s
         """
 

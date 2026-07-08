@@ -79,6 +79,8 @@ def test_export_contracts_excel_exports_all_contracts(monkeypatch, tmp_path):
     assert worksheet.auto_filter.ref == "A1:M3"
     assert "FL_MONITORAR_CONTRATO" not in connection.cursor_instance.query
     assert "WHERE" not in connection.cursor_instance.query.upper()
+    assert "i.NUM_CONTRATO" in connection.cursor_instance.query
+    assert "i.DT_FIM" in connection.cursor_instance.query
 
     assert worksheet["A2"].value == 123
     assert worksheet["B2"].value is None
