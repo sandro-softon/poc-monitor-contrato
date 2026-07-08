@@ -395,10 +395,12 @@ function App() {
       key: 'fl_acessos_ilimitados',
       width: 80,
       render: (value, record, index) => (
-        <Checkbox
-          checked={value}
-          onChange={(e) => handleServicoChange(index, 'fl_acessos_ilimitados', e.target.checked)}
-        />
+        <div style={{ textAlign: 'center' }}>
+          <Checkbox
+            checked={value}
+            onChange={(e) => handleServicoChange(index, 'fl_acessos_ilimitados', e.target.checked)}
+          />
+        </div>
       ),
     },
     {
@@ -644,7 +646,7 @@ function App() {
                               <Input disabled value={editingContract.codigo_instituicao} />
                             </Form.Item>
                             <Form.Item name="cod_compartilhado" label="Cod. Compartilhado" style={{ flex: 1 }}>
-                              <InputNumber style={{ width: '100%' }} min={0} />
+                              <Input style={{ width: '100%' }} />
                             </Form.Item>
                           </div>
 
@@ -658,13 +660,13 @@ function App() {
 
                           <div style={{ display: 'flex', gap: 12 }}>
                             <Form.Item name="dt_ini" label="Data Início" style={{ flex: 1 }}>
-                              <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} allowClear={false} />
+                              <DatePicker format="DD/MM/YYYY" className="center-date" style={{ width: '100%' }} allowClear={false} />
                             </Form.Item>
                             <Form.Item name="dt_fim" label="Data Fim" style={{ flex: 1 }}>
-                              <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} allowClear={false} />
+                              <DatePicker format="DD/MM/YYYY" className="center-date" style={{ width: '100%' }} allowClear={false} />
                             </Form.Item>
                             <Form.Item name="dt_corte_inicial" label="Corte Inicial" style={{ flex: 1 }}>
-                              <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} allowClear={false} />
+                              <DatePicker format="DD/MM/YYYY" className="center-date" style={{ width: '100%' }} allowClear={false} />
                             </Form.Item>
                           </div>
 
@@ -855,17 +857,17 @@ function App() {
                           </Form.Item>
                           <div style={{ display: 'flex', gap: 12 }}>
                             <Form.Item name="dt_ini" label="Data Início" style={{ flex: 1 }}>
-                              <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} allowClear={false} />
+                              <DatePicker format="DD/MM/YYYY" className="center-date" style={{ width: '100%' }} allowClear={false} />
                             </Form.Item>
                             <Form.Item name="dt_fim" label="Data Fim" style={{ flex: 1 }}>
-                              <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} allowClear={false} />
+                              <DatePicker format="DD/MM/YYYY" className="center-date" style={{ width: '100%' }} allowClear={false} />
                             </Form.Item>
                             <Form.Item name="dt_corte_inicial" label="Corte Inicial" style={{ flex: 1 }}>
-                              <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} allowClear={false} />
+                              <DatePicker format="DD/MM/YYYY" className="center-date" style={{ width: '100%' }} allowClear={false} />
                             </Form.Item>
                           </div>
                           <Form.Item name="cod_compartilhado" label="Código Compartilhado">
-                            <InputNumber style={{ width: '100%' }} min={0} />
+                            <Input style={{ width: '100%' }} />
                           </Form.Item>
                           <Form.Item name="frequencia_corte" label="Frequência">
                             <Select
