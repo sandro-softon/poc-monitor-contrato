@@ -45,6 +45,32 @@ def list_contracts(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
+@app.get("/api/contracts/{codigo}", dependencies=[Depends(require_auth)])
+def get_contract_detail(
+    codigo: int,
+    db: Session = Depends(get_db),
+):
+    try:
+        detail = ContractRepository(db).get_contract_detail(codigo)
+        if detail is None:
+            raise HTTPException(status_code=404, detail="Contrato não encontrado")
+        return detail
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@app.put("/api/contracts/{codigo}", dependencies=[Depends(require_auth)])
+def update_contract(
+    codigo: int,
+    data: dict,
+    db: Session = Depends(get_db),
+):
+    try:
+        return ContractRepository(db).update_contract(codigo, data)
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
 @app.get("/api/institutions", dependencies=[Depends(require_auth)])
 def list_institutions(
     q: str | None = None,

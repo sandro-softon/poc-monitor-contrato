@@ -8,8 +8,10 @@ ALLOWED_FIELDS = {
     "numero_contrato": "NUM_CONTRATO",
     "dt_ini": "DT_INI",
     "dt_fim": "DT_FIM",
+    "cod_compartilhado": "COD_COMPARTILHADO",
+    "dt_corte_inicial": "DT_CORTE_INICIAL",
+    "frequencia_corte": "FREQUENCIA_CORTE",
     "status": "STATUS",
-    "tp_acessos": "TP_ACESSOS",
     "num_ac_contratados": "NUM_AC_CONTRATADOS",
     "numero_linhas_resultado": "NUMERO_LINHAS_RESULTADO",
 }
@@ -18,6 +20,9 @@ SYNC_FIELDS = {
     "numero_contrato": "NUM_CONTRATO",
     "dt_ini": "DT_INI",
     "dt_fim": "DT_FIM",
+    "cod_compartilhado": "COD_COMPARTILHADO",
+    "dt_corte_inicial": "DT_CORTE_INICIAL",
+    "frequencia_corte": "FREQUENCIA_CORTE",
 }
 
 
@@ -28,8 +33,16 @@ def _to_dict(inst: Instituicao) -> dict:
         "numero_contrato": inst.numero_contrato,
         "dt_ini": inst.dt_ini.isoformat() if inst.dt_ini else None,
         "dt_fim": inst.dt_fim.isoformat() if inst.dt_fim else None,
+        "cod_compartilhado": (
+            int(inst.cod_compartilhado)
+            if inst.cod_compartilhado is not None
+            else None
+        ),
+        "dt_corte_inicial": (
+            inst.dt_corte_inicial.isoformat() if inst.dt_corte_inicial else None
+        ),
+        "frequencia_corte": inst.frequencia_corte,
         "status": inst.status,
-        "tp_acessos": inst.tp_acessos,
         "num_ac_contratados": inst.num_ac_contratados,
         "numero_linhas_resultado": (
             int(inst.numero_linhas_resultado)

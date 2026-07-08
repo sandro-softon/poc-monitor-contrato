@@ -21,6 +21,15 @@ class Instituicao(Base):
     numero_contrato: Mapped[Optional[str]] = mapped_column("NUM_CONTRATO", String(50))
     dt_ini: Mapped[Optional[datetime]] = mapped_column("DT_INI", DateTime)
     dt_fim: Mapped[Optional[datetime]] = mapped_column("DT_FIM", DateTime)
+    cod_compartilhado: Mapped[Optional[Decimal]] = mapped_column(
+        "COD_COMPARTILHADO", Numeric(10, 0)
+    )
+    dt_corte_inicial: Mapped[Optional[datetime]] = mapped_column(
+        "DT_CORTE_INICIAL", DateTime
+    )
+    frequencia_corte: Mapped[Optional[str]] = mapped_column(
+        "FREQUENCIA_CORTE", String(20)
+    )
     num_ac_contratados: Mapped[Optional[int]] = mapped_column(
         "NUM_AC_CONTRATADOS", INTEGER
     )

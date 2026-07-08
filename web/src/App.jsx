@@ -4,6 +4,7 @@ import {
   App as AntApp,
   Button,
   Card,
+  Checkbox,
   ConfigProvider,
   Drawer,
   Form,
@@ -67,14 +68,6 @@ function formatNumber(value) {
   return Number(value).toLocaleString('pt-BR')
 }
 
-function formatCurrency(value) {
-  if (value === null || value === undefined) return '-'
-  return Number(value).toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  })
-}
-
 function App() {
   const [token, setToken] = useState(null)
   const [username, setUsername] = useState('admin')
@@ -94,11 +87,15 @@ function App() {
   const [instTotal, setInstTotal] = useState(0)
   const [instLoading, setInstLoading] = useState(false)
   const [instError, setInstError] = useState(null)
-  const [instFilters, setInstFilters] = useState({ q: '', status: null })
+  const [instFilters, setInstFilters] = useState({ q: '', status: 1 })
   const [instPagination, setInstPagination] = useState({ current: 1, pageSize: 20 })
   const [editingInst, setEditingInst] = useState(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [savingInst, setSavingInst] = useState(false)
+
+  const [editingContract, setEditingContract] = useState(null)
+  const [contractDrawerOpen, setContractDrawerOpen] = useState(false)
+  const [savingContract, setSavingContract] = useState(false)
 
   async function handleLogin(event) {
     event.preventDefault()
@@ -185,6 +182,67 @@ function App() {
     }
   }, [token, activePage])
 
+  async function handleEditContract(codigo) {
+    try {
+      const response = await fetch(`/api/contracts/${codigo}`, { headers: authHeaders(token) })
+      if (!response.ok) throw new Error('Erro ao carregar detalhes')
+      const data = await response.json()
+      setEditingContract(data)
+      setContractDrawerOpen(true)
+    } catch (err) {
+      message.error(err.message)
+    }
+  }
+
+  function handleCloseContractDrawer() {
+    setContractDrawerOpen(false)
+    setEditingContract(null)
+  }
+
+  function handleServicoChange(index, field, value) {
+    if (!editingContract) return
+    const servicos = [...editingContract.servicos]
+    servicos[index] = { ...servicos[index], [field]: value }
+    setEditingContract({ ...editingContract, servicos })
+  }
+
+  async function handleSaveContract(values) {
+    if (!editingContract) return
+    setSavingContract(true)
+    try {
+      const body = { ...values, codigo: undefined }
+      for (const key of Object.keys(body)) {
+        if (body[key] === '' || body[key] === null || body[key] === undefined) {
+          delete body[key]
+        }
+      }
+      body.servicos = editingContract.servicos.map((s) => ({
+        id: s.id,
+        servico: s.servico,
+        num_ac_contratados: s.num_ac_contratados,
+        fl_acessos_ilimitados: s.fl_acessos_ilimitados ? 1 : 0,
+        valor_excedente: s.valor_excedente,
+        fl_monitorar_contrato: s.fl_monitorar_contrato ? 1 : 0,
+      }))
+      const response = await fetch(`/api/contracts/${editingContract.codigo_instituicao}`, {
+        method: 'PUT',
+        headers: { ...authHeaders(token), 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.detail || 'Erro ao salvar')
+      }
+      message.success('Contrato atualizado com sucesso')
+      await loadContracts()
+      handleCloseContractDrawer()
+    } catch (err) {
+      message.error(err.message)
+    } finally {
+      setSavingContract(false)
+    }
+  }
+
   function handleEditInstitution(record) {
     setEditingInst({ ...record })
     setDrawerOpen(true)
@@ -226,57 +284,47 @@ function App() {
 
   const contractColumns = [
     {
-      title: '#',
-      key: 'row_number',
-      width: 70,
-      align: 'right',
-      render: (_, __, index) => (pagination.current - 1) * pagination.pageSize + index + 1,
+      title: 'Código',
+      dataIndex: 'codigo_instituicao',
+      key: 'codigo_instituicao',
+      width: 120,
     },
     {
       title: 'Instituição',
       dataIndex: 'nome_instituicao',
       key: 'nome_instituicao',
-      render: (value, record) => (
-        <Space direction="vertical" size={0}>
-          <Text strong>{value}</Text>
-          <Text type="secondary">{record.codigo_instituicao}</Text>
-        </Space>
+    },
+    {
+      title: 'Contrato',
+      dataIndex: 'numero_contrato',
+      key: 'numero_contrato',
+      width: 140,
+    },
+    { title: 'Início', dataIndex: 'dt_ini', key: 'dt_ini', render: formatDate, width: 100 },
+    { title: 'Fim', dataIndex: 'dt_fim', key: 'dt_fim', render: formatDate, width: 100 },
+    { title: 'Corte', dataIndex: 'dt_corte_inicial', key: 'dt_corte_inicial', render: formatDate, width: 100 },
+    { title: 'Freq.', dataIndex: 'frequencia_corte', key: 'frequencia_corte', width: 90 },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      width: 80,
+      render: (v) =>
+        v === 1 ? <Tag color="green">Ativo</Tag> : <Tag color="default">Inativo</Tag>,
+    },
+    {
+      title: 'Ações',
+      key: 'actions',
+      width: 90,
+      render: (_, record) => (
+        <Button
+          size="small"
+          icon={<EditOutlined />}
+          onClick={() => handleEditContract(record.codigo_instituicao)}
+        >
+          Editar
+        </Button>
       ),
-    },
-    { title: 'Contrato', dataIndex: 'numero_contrato', key: 'numero_contrato', width: 150 },
-    {
-      title: 'Serviços',
-      dataIndex: 'servicos_contratados',
-      key: 'servicos_contratados',
-      render: (value) => (
-        <Space wrap size={[4, 4]}>
-          {String(value || '')
-            .split(',')
-            .map((item) => item.trim())
-            .filter(Boolean)
-            .map((item) => (
-              <Tag color={item === 'API' ? 'blue' : item === 'Lote' ? 'cyan' : 'purple'} key={item}>
-                {item}
-              </Tag>
-            ))}
-        </Space>
-      ),
-    },
-    { title: 'Corte inicial', dataIndex: 'dt_corte_inicial', render: formatDate, width: 130 },
-    { title: 'Frequência', dataIndex: 'frequencia_corte', width: 120 },
-    {
-      title: 'Qtde Acessos Contratados',
-      dataIndex: 'num_ac_contratados',
-      align: 'right',
-      width: 190,
-      render: (value, record) => (record.fl_acessos_ilimitados ? '∞' : formatNumber(value)),
-    },
-    {
-      title: 'Valor Excedente',
-      dataIndex: 'valor_excedente',
-      align: 'right',
-      width: 150,
-      render: formatCurrency,
     },
   ]
 
@@ -294,7 +342,6 @@ function App() {
       render: (v) =>
         v === 1 ? <Tag color="green">Ativo</Tag> : <Tag color="default">Inativo</Tag>,
     },
-
     {
       title: 'Ações',
       key: 'actions',
@@ -303,6 +350,74 @@ function App() {
         <Button size="small" icon={<EditOutlined />} onClick={() => handleEditInstitution(record)}>
           Editar
         </Button>
+      ),
+    },
+  ]
+
+  const servicoColumns = [
+    {
+      title: 'Serviço',
+      dataIndex: 'servico',
+      key: 'servico',
+      width: 120,
+      render: (value) => (
+        <Tag color={value === 'API' ? 'blue' : value === 'Lote' ? 'cyan' : 'purple'}>
+          {value}
+        </Tag>
+      ),
+    },
+    {
+      title: 'Qtde Acessos',
+      dataIndex: 'num_ac_contratados',
+      key: 'num_ac_contratados',
+      width: 130,
+      render: (value, record, index) => (
+        <InputNumber
+          value={value}
+          onChange={(v) => handleServicoChange(index, 'num_ac_contratados', v)}
+          min={0}
+          disabled={record.fl_acessos_ilimitados}
+          style={{ width: '100%' }}
+        />
+      ),
+    },
+    {
+      title: 'Ilimitado',
+      dataIndex: 'fl_acessos_ilimitados',
+      key: 'fl_acessos_ilimitados',
+      width: 90,
+      render: (value, record, index) => (
+        <Checkbox
+          checked={value}
+          onChange={(e) => handleServicoChange(index, 'fl_acessos_ilimitados', e.target.checked)}
+        />
+      ),
+    },
+    {
+      title: 'Valor Excedente',
+      dataIndex: 'valor_excedente',
+      key: 'valor_excedente',
+      width: 140,
+      render: (value, record, index) => (
+        <InputNumber
+          value={value}
+          onChange={(v) => handleServicoChange(index, 'valor_excedente', v)}
+          min={0}
+          step={0.01}
+          style={{ width: '100%' }}
+        />
+      ),
+    },
+    {
+      title: 'Monitorar',
+      dataIndex: 'fl_monitorar_contrato',
+      key: 'fl_monitorar_contrato',
+      width: 90,
+      render: (value, record, index) => (
+        <Checkbox
+          checked={value}
+          onChange={(e) => handleServicoChange(index, 'fl_monitorar_contrato', e.target.checked)}
+        />
       ),
     },
   ]
@@ -388,7 +503,7 @@ function App() {
                 </Title>
                 <Text type="secondary">
                   {activePage === 'contracts'
-                    ? 'Manutenção e consulta de contratos monitorados.'
+                    ? 'Manutenção e consulta de contratos.'
                     : 'Cadastro e manutenção de instituições.'}
                 </Text>
               </div>
@@ -423,7 +538,7 @@ function App() {
                       >
                         <Form.Item label="Buscar">
                           <Input
-                            placeholder="Instituição, código ou contrato"
+                            placeholder="Código, nome ou contrato"
                             prefix={<SearchOutlined />}
                             value={filters.q}
                             onChange={(e) => setFilters({ ...filters, q: e.target.value })}
@@ -459,12 +574,12 @@ function App() {
                         </Form.Item>
                       </Form>
                     </Card>
-                    <Card className="panel-card contracts-card" title={`Contratos (${total})`}>
+                    <Card className="panel-card" title={`Contratos (${total})`}>
                       {error && (
                         <Alert type="error" message={error} showIcon style={{ marginBottom: 16 }} />
                       )}
                       <Table
-                        rowKey="id"
+                        rowKey="codigo_instituicao"
                         columns={contractColumns}
                         dataSource={contracts}
                         loading={loading}
@@ -481,6 +596,96 @@ function App() {
                         }}
                       />
                     </Card>
+                    <Drawer
+                      title={
+                        editingContract
+                          ? `Editar Contrato - ${editingContract.nome_instituicao} (${editingContract.codigo_instituicao})`
+                          : 'Carregando...'
+                      }
+                      open={contractDrawerOpen}
+                      onClose={handleCloseContractDrawer}
+                      width={640}
+                    >
+                      {editingContract && (
+                        <Form
+                          layout="vertical"
+                          initialValues={{
+                            numero_contrato: editingContract.numero_contrato,
+                            dt_ini: editingContract.dt_ini ? editingContract.dt_ini.split('T')[0] : '',
+                            dt_fim: editingContract.dt_fim ? editingContract.dt_fim.split('T')[0] : '',
+                            cod_compartilhado: editingContract.cod_compartilhado,
+                            dt_corte_inicial: editingContract.dt_corte_inicial
+                              ? editingContract.dt_corte_inicial.split('T')[0]
+                              : '',
+                            frequencia_corte: editingContract.frequencia_corte,
+                            status: editingContract.status,
+                          }}
+                          onFinish={handleSaveContract}
+                        >
+                          <Text strong style={{ display: 'block', marginBottom: 8 }}>
+                            Dados do Contrato
+                          </Text>
+                          <Form.Item label="Código Instituição">
+                            <Input disabled value={editingContract.codigo_instituicao} />
+                          </Form.Item>
+                          <Form.Item label="Nome Instituição">
+                            <Input disabled value={editingContract.nome_instituicao} />
+                          </Form.Item>
+                          <Form.Item name="numero_contrato" label="Número do Contrato">
+                            <Input />
+                          </Form.Item>
+                          <Form.Item name="dt_ini" label="Data Início">
+                            <Input placeholder="YYYY-MM-DD" />
+                          </Form.Item>
+                          <Form.Item name="dt_fim" label="Data Fim">
+                            <Input placeholder="YYYY-MM-DD" />
+                          </Form.Item>
+                          <Form.Item name="cod_compartilhado" label="Código Compartilhado">
+                            <InputNumber style={{ width: '100%' }} min={0} />
+                          </Form.Item>
+                          <Form.Item name="dt_corte_inicial" label="Data Corte Inicial">
+                            <Input placeholder="YYYY-MM-DD" />
+                          </Form.Item>
+                          <Form.Item name="frequencia_corte" label="Frequência">
+                            <Select
+                              options={['Mensal', 'Trimestral', 'Semestral', 'Anual'].map((v) => ({
+                                value: v,
+                                label: v,
+                              }))}
+                            />
+                          </Form.Item>
+                          <Form.Item name="status" label="Status">
+                            <Select
+                              options={[
+                                { value: 1, label: 'Ativo' },
+                                { value: 0, label: 'Inativo' },
+                              ]}
+                            />
+                          </Form.Item>
+
+                          <Text strong style={{ display: 'block', marginBottom: 8, marginTop: 16 }}>
+                            Serviços
+                          </Text>
+                          <Table
+                            rowKey="id"
+                            columns={servicoColumns}
+                            dataSource={editingContract.servicos}
+                            pagination={false}
+                            scroll={{ x: 600 }}
+                            size="small"
+                          />
+
+                          <Form.Item style={{ marginTop: 24 }}>
+                            <Space>
+                              <Button type="primary" htmlType="submit" loading={savingContract}>
+                                Salvar
+                              </Button>
+                              <Button onClick={handleCloseContractDrawer}>Cancelar</Button>
+                            </Space>
+                          </Form.Item>
+                        </Form>
+                      )}
+                    </Drawer>
                   </>
                 ) : (
                   <>
@@ -503,12 +708,11 @@ function App() {
                             allowClear
                             placeholder="Todos"
                             value={instFilters.status}
-                            onChange={(value) =>
-                              setInstFilters({
-                                ...instFilters,
-                                status: value !== undefined ? value : null,
-                              })
-                            }
+                            onChange={(value) => {
+                              const newStatus = value !== undefined ? value : null
+                              setInstFilters({ ...instFilters, status: newStatus })
+                              loadInstitutions(1, instPagination.pageSize)
+                            }}
                             options={[
                               { value: 1, label: 'Ativo' },
                               { value: 0, label: 'Inativo' },
@@ -573,9 +777,12 @@ function App() {
                             numero_contrato: editingInst.numero_contrato,
                             dt_ini: editingInst.dt_ini ? editingInst.dt_ini.split('T')[0] : '',
                             dt_fim: editingInst.dt_fim ? editingInst.dt_fim.split('T')[0] : '',
+                            cod_compartilhado: editingInst.cod_compartilhado,
+                            dt_corte_inicial: editingInst.dt_corte_inicial
+                              ? editingInst.dt_corte_inicial.split('T')[0]
+                              : '',
+                            frequencia_corte: editingInst.frequencia_corte,
                             status: editingInst.status,
-
-                            tp_acessos: editingInst.tp_acessos,
                             num_ac_contratados: editingInst.num_ac_contratados,
                             numero_linhas_resultado: editingInst.numero_linhas_resultado,
                           }}
@@ -599,12 +806,11 @@ function App() {
                               ]}
                             />
                           </Form.Item>
-
                           <Text strong style={{ display: 'block', marginBottom: 8 }}>
-                            Contrato único
+                            Contrato
                           </Text>
                           <Form.Item name="numero_contrato" label="Número do Contrato">
-                            <Input placeholder="Ex: CW40194" />
+                            <Input />
                           </Form.Item>
                           <Form.Item name="dt_ini" label="Data Início">
                             <Input placeholder="YYYY-MM-DD" />
@@ -612,19 +818,23 @@ function App() {
                           <Form.Item name="dt_fim" label="Data Fim">
                             <Input placeholder="YYYY-MM-DD" />
                           </Form.Item>
+                          <Form.Item name="cod_compartilhado" label="Código Compartilhado">
+                            <InputNumber style={{ width: '100%' }} min={0} />
+                          </Form.Item>
+                          <Form.Item name="dt_corte_inicial" label="Data Corte Inicial">
+                            <Input placeholder="YYYY-MM-DD" />
+                          </Form.Item>
+                          <Form.Item name="frequencia_corte" label="Frequência">
+                            <Select
+                              options={['Mensal', 'Trimestral', 'Semestral', 'Anual'].map((v) => ({
+                                value: v,
+                                label: v,
+                              }))}
+                            />
+                          </Form.Item>
                           <Form.Item name="num_ac_contratados" label="Qtde. Acessos Contratados">
                             <InputNumber style={{ width: '100%' }} min={0} />
                           </Form.Item>
-                          <Form.Item
-                            name="tp_acessos"
-                            label="Tipo de Acesso"
-                            rules={[{ required: true, message: 'Tipo de acesso é obrigatório' }]}
-                          >
-                            <Input />
-                          </Form.Item>
-                          <Text strong style={{ display: 'block', marginBottom: 8 }}>
-                            Configuração de resultado
-                          </Text>
                           <Form.Item name="numero_linhas_resultado" label="Número de Linhas">
                             <InputNumber style={{ width: '100%' }} min={0} />
                           </Form.Item>
