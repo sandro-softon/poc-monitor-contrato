@@ -5,17 +5,22 @@ import {
   Button,
   Card,
   ConfigProvider,
+  Drawer,
   Form,
   Input,
+  InputNumber,
   Layout,
   Select,
   Space,
   Table,
   Tag,
   Typography,
+  message,
   theme,
 } from 'antd'
 import {
+  BankOutlined,
+  EditOutlined,
   FileTextOutlined,
   LogoutOutlined,
   PlusOutlined,
@@ -39,11 +44,7 @@ const darkTheme = {
       'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   components: {
-    Layout: {
-      headerBg: '#111827',
-      siderBg: '#111827',
-      bodyBg: '#0b1020',
-    },
+    Layout: { headerBg: '#111827', siderBg: '#111827', bodyBg: '#0b1020' },
     Table: { headerBg: '#172033' },
     Card: { headerFontSize: 15 },
   },
@@ -80,12 +81,24 @@ function App() {
   const [password, setPassword] = useState('admin')
   const [loginError, setLoginError] = useState(null)
   const [loadingLogin, setLoadingLogin] = useState(false)
+  const [activePage, setActivePage] = useState('contracts')
+
   const [contracts, setContracts] = useState([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [filters, setFilters] = useState({ q: '', service: [] })
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20 })
+
+  const [institutions, setInstitutions] = useState([])
+  const [instTotal, setInstTotal] = useState(0)
+  const [instLoading, setInstLoading] = useState(false)
+  const [instError, setInstError] = useState(null)
+  const [instFilters, setInstFilters] = useState({ q: '' })
+  const [instPagination, setInstPagination] = useState({ current: 1, pageSize: 20 })
+  const [editingInst, setEditingInst] = useState(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [savingInst, setSavingInst] = useState(false)
 
   async function handleLogin(event) {
     event.preventDefault()
@@ -137,11 +150,78 @@ function App() {
     }
   }
 
-  useEffect(() => {
-    if (token) loadContracts(1, pagination.pageSize)
-  }, [token])
+  async function loadInstitutions(page = instPagination.current, pageSize = instPagination.pageSize) {
+    if (!token) return
+    setInstLoading(true)
+    setInstError(null)
+    try {
+      const params = new URLSearchParams({ page, page_size: pageSize })
+      if (instFilters.q) params.set('q', instFilters.q)
+      const response = await fetch(`/api/institutions?${params.toString()}`, {
+        headers: authHeaders(token),
+      })
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.detail || 'Erro ao carregar instituições')
+      }
+      const data = await response.json()
+      setInstitutions(data.items)
+      setInstTotal(data.total)
+      setInstPagination({ current: data.page, pageSize: data.page_size })
+    } catch (err) {
+      setInstError(err.message)
+    } finally {
+      setInstLoading(false)
+    }
+  }
 
-  const columns = [
+  useEffect(() => {
+    if (token) {
+      if (activePage === 'contracts') loadContracts(1, pagination.pageSize)
+      else loadInstitutions(1, instPagination.pageSize)
+    }
+  }, [token, activePage])
+
+  function handleEditInstitution(record) {
+    setEditingInst({ ...record })
+    setDrawerOpen(true)
+  }
+
+  function handleCloseDrawer() {
+    setDrawerOpen(false)
+    setEditingInst(null)
+  }
+
+  async function handleSaveInstitution(values) {
+    if (!editingInst) return
+    setSavingInst(true)
+    try {
+      const body = { ...values }
+      for (const key of Object.keys(body)) {
+        if (body[key] === '' || body[key] === null || body[key] === undefined) {
+          delete body[key]
+        }
+      }
+      const response = await fetch(`/api/institutions/${editingInst.codigo_instituicao}`, {
+        method: 'PUT',
+        headers: { ...authHeaders(token), 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.detail || 'Erro ao salvar')
+      }
+      message.success('Instituição atualizada com sucesso')
+      await loadInstitutions()
+      handleCloseDrawer()
+    } catch (err) {
+      message.error(err.message)
+    } finally {
+      setSavingInst(false)
+    }
+  }
+
+  const contractColumns = [
     {
       title: '#',
       key: 'row_number',
@@ -197,6 +277,33 @@ function App() {
     },
   ]
 
+  const instColumns = [
+    { title: 'Código', dataIndex: 'codigo_instituicao', key: 'codigo_instituicao', width: 120 },
+    { title: 'Nome', dataIndex: 'nome_instituicao', key: 'nome_instituicao' },
+    { title: 'Contrato', dataIndex: 'numero_contrato', key: 'numero_contrato', width: 140 },
+    { title: 'Início', dataIndex: 'dt_ini', key: 'dt_ini', render: formatDate, width: 100 },
+    { title: 'Fim', dataIndex: 'dt_fim', key: 'dt_fim', render: formatDate, width: 100 },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      width: 80,
+      render: (v) =>
+        v === 1 ? <Tag color="green">Ativo</Tag> : <Tag color="default">Inativo</Tag>,
+    },
+    { title: 'Produtos', dataIndex: 'produtos', key: 'produtos', width: 120 },
+    {
+      title: 'Ações',
+      key: 'actions',
+      width: 90,
+      render: (_, record) => (
+        <Button size="small" icon={<EditOutlined />} onClick={() => handleEditInstitution(record)}>
+          Editar
+        </Button>
+      ),
+    },
+  ]
+
   if (!token) {
     return (
       <ConfigProvider locale={ptBR} theme={darkTheme}>
@@ -213,10 +320,19 @@ function App() {
                 </div>
                 <Form layout="vertical" requiredMark={false} onSubmitCapture={handleLogin}>
                   <Form.Item label="Usuário">
-                    <Input value={username} onChange={(e) => setUsername(e.target.value)} size="large" autoFocus />
+                    <Input
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      size="large"
+                      autoFocus
+                    />
                   </Form.Item>
                   <Form.Item label="Senha">
-                    <Input.Password value={password} onChange={(e) => setPassword(e.target.value)} size="large" />
+                    <Input.Password
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      size="large"
+                    />
                   </Form.Item>
                   <Button type="primary" htmlType="submit" block size="large" loading={loadingLogin}>
                     Entrar
@@ -244,26 +360,49 @@ function App() {
               <h1 className="brand-title">Monitor de Contratos</h1>
               <p className="brand-subtitle">Contract operations</p>
             </div>
-            <div className="side-item active">
+            <div
+              className={`side-item ${activePage === 'contracts' ? 'active' : ''}`}
+              onClick={() => setActivePage('contracts')}
+              style={{ cursor: 'pointer' }}
+            >
               <FileTextOutlined />
               <span>Contratos</span>
+            </div>
+            <div
+              className={`side-item ${activePage === 'institutions' ? 'active' : ''}`}
+              onClick={() => setActivePage('institutions')}
+              style={{ cursor: 'pointer' }}
+            >
+              <BankOutlined />
+              <span>Instituições</span>
             </div>
           </Sider>
           <Layout>
             <Header className="app-header">
               <div>
                 <Title level={3} style={{ margin: 0 }}>
-                  Contratos
+                  {activePage === 'contracts' ? 'Contratos' : 'Instituições'}
                 </Title>
-                <Text type="secondary">Manutenção e consulta de contratos monitorados.</Text>
+                <Text type="secondary">
+                  {activePage === 'contracts'
+                    ? 'Manutenção e consulta de contratos monitorados.'
+                    : 'Cadastro e manutenção de instituições.'}
+                </Text>
               </div>
               <Space>
-                <Button icon={<ReloadOutlined />} onClick={() => loadContracts()}>
+                <Button
+                  icon={<ReloadOutlined />}
+                  onClick={() =>
+                    activePage === 'contracts' ? loadContracts() : loadInstitutions()
+                  }
+                >
                   Atualizar
                 </Button>
-                <Button type="primary" icon={<PlusOutlined />} disabled>
-                  Novo contrato
-                </Button>
+                {activePage === 'contracts' && (
+                  <Button type="primary" icon={<PlusOutlined />} disabled>
+                    Novo contrato
+                  </Button>
+                )}
                 <Button icon={<LogoutOutlined />} onClick={() => setToken(null)}>
                   Sair
                 </Button>
@@ -271,67 +410,223 @@ function App() {
             </Header>
             <Content className="page-content">
               <div className="page-container">
-                <Card className="panel-card" title="Busca e filtros">
-                  <Form
-                    layout="vertical"
-                    onFinish={() => loadContracts(1, pagination.pageSize)}
-                    className="filter-grid"
-                  >
-                    <Form.Item label="Buscar">
-                      <Input
-                        placeholder="Instituição, código ou contrato"
-                        prefix={<SearchOutlined />}
-                        value={filters.q}
-                        onChange={(e) => setFilters({ ...filters, q: e.target.value })}
+                {activePage === 'contracts' ? (
+                  <>
+                    <Card className="panel-card" title="Busca e filtros">
+                      <Form
+                        layout="vertical"
+                        onFinish={() => loadContracts(1, pagination.pageSize)}
+                        className="filter-grid"
+                      >
+                        <Form.Item label="Buscar">
+                          <Input
+                            placeholder="Instituição, código ou contrato"
+                            prefix={<SearchOutlined />}
+                            value={filters.q}
+                            onChange={(e) => setFilters({ ...filters, q: e.target.value })}
+                          />
+                        </Form.Item>
+                        <Form.Item label="Serviço">
+                          <Select
+                            mode="multiple"
+                            allowClear
+                            placeholder="Todos"
+                            value={filters.service}
+                            onChange={(value) => setFilters({ ...filters, service: value })}
+                            options={['Individual', 'Lote', 'API'].map((value) => ({
+                              value,
+                              label: value,
+                            }))}
+                          />
+                        </Form.Item>
+                        <Form.Item label=" ">
+                          <Space>
+                            <Button type="primary" htmlType="submit">
+                              Aplicar filtros
+                            </Button>
+                            <Button
+                              onClick={() => {
+                                setFilters({ q: '', service: [] })
+                                setTimeout(() => loadContracts(1, pagination.pageSize), 0)
+                              }}
+                            >
+                              Limpar
+                            </Button>
+                          </Space>
+                        </Form.Item>
+                      </Form>
+                    </Card>
+                    <Card className="panel-card contracts-card" title={`Contratos (${total})`}>
+                      {error && (
+                        <Alert type="error" message={error} showIcon style={{ marginBottom: 16 }} />
+                      )}
+                      <Table
+                        rowKey="id"
+                        columns={contractColumns}
+                        dataSource={contracts}
+                        loading={loading}
+                        scroll={{ x: 1100 }}
+                        pagination={{
+                          current: pagination.current,
+                          pageSize: pagination.pageSize,
+                          total,
+                          showSizeChanger: true,
+                          pageSizeOptions: [10, 20, 50, 100],
+                        }}
+                        onChange={(nextPagination) => {
+                          loadContracts(nextPagination.current, nextPagination.pageSize)
+                        }}
                       />
-                    </Form.Item>
-                    <Form.Item label="Serviço">
-                      <Select
-                        mode="multiple"
-                        allowClear
-                        placeholder="Todos"
-                        value={filters.service}
-                        onChange={(value) => setFilters({ ...filters, service: value })}
-                        options={['Individual', 'Lote', 'API'].map((value) => ({ value, label: value }))}
+                    </Card>
+                  </>
+                ) : (
+                  <>
+                    <Card className="panel-card" title="Busca">
+                      <Form
+                        layout="vertical"
+                        onFinish={() => loadInstitutions(1, instPagination.pageSize)}
+                        className="filter-grid"
+                      >
+                        <Form.Item label="Buscar">
+                          <Input
+                            placeholder="Código, nome ou contrato"
+                            prefix={<SearchOutlined />}
+                            value={instFilters.q}
+                            onChange={(e) => setInstFilters({ q: e.target.value })}
+                          />
+                        </Form.Item>
+                        <Form.Item label=" ">
+                          <Space>
+                            <Button type="primary" htmlType="submit">
+                              Aplicar filtros
+                            </Button>
+                            <Button
+                              onClick={() => {
+                                setInstFilters({ q: '' })
+                                setTimeout(() => loadInstitutions(1, instPagination.pageSize), 0)
+                              }}
+                            >
+                              Limpar
+                            </Button>
+                          </Space>
+                        </Form.Item>
+                      </Form>
+                    </Card>
+                    <Card className="panel-card" title={`Instituições (${instTotal})`}>
+                      {instError && (
+                        <Alert
+                          type="error"
+                          message={instError}
+                          showIcon
+                          style={{ marginBottom: 16 }}
+                        />
+                      )}
+                      <Table
+                        rowKey="codigo_instituicao"
+                        columns={instColumns}
+                        dataSource={institutions}
+                        loading={instLoading}
+                        scroll={{ x: 1000 }}
+                        pagination={{
+                          current: instPagination.current,
+                          pageSize: instPagination.pageSize,
+                          total: instTotal,
+                          showSizeChanger: true,
+                          pageSizeOptions: [10, 20, 50, 100],
+                        }}
+                        onChange={(nextPagination) => {
+                          loadInstitutions(nextPagination.current, nextPagination.pageSize)
+                        }}
                       />
-                    </Form.Item>
-                    <Form.Item label=" ">
-                      <Space>
-                        <Button type="primary" htmlType="submit">
-                          Aplicar filtros
-                        </Button>
-                        <Button
-                          onClick={() => {
-                            setFilters({ q: '', service: [] })
-                            setTimeout(() => loadContracts(1, pagination.pageSize), 0)
+                    </Card>
+                    <Drawer
+                      title={`Editar Instituição - ${editingInst?.codigo_instituicao || ''}`}
+                      open={drawerOpen}
+                      onClose={handleCloseDrawer}
+                      width={520}
+                    >
+                      {editingInst && (
+                        <Form
+                          layout="vertical"
+                          initialValues={{
+                            nome_instituicao: editingInst.nome_instituicao,
+                            numero_contrato: editingInst.numero_contrato,
+                            dt_ini: editingInst.dt_ini ? editingInst.dt_ini.split('T')[0] : '',
+                            dt_fim: editingInst.dt_fim ? editingInst.dt_fim.split('T')[0] : '',
+                            status: editingInst.status,
+                            produtos: editingInst.produtos,
+                            tp_acessos: editingInst.tp_acessos,
+                            num_ac_contratados: editingInst.num_ac_contratados,
+                            numero_linhas_resultado: editingInst.numero_linhas_resultado,
                           }}
+                          onFinish={handleSaveInstitution}
                         >
-                          Limpar
-                        </Button>
-                      </Space>
-                    </Form.Item>
-                  </Form>
-                </Card>
-                <Card className="panel-card contracts-card" title={`Contratos (${total})`}>
-                  {error && <Alert type="error" message={error} showIcon style={{ marginBottom: 16 }} />}
-                  <Table
-                    rowKey="id"
-                    columns={columns}
-                    dataSource={contracts}
-                    loading={loading}
-                    scroll={{ x: 1100 }}
-                    pagination={{
-                      current: pagination.current,
-                      pageSize: pagination.pageSize,
-                      total,
-                      showSizeChanger: true,
-                      pageSizeOptions: [10, 20, 50, 100],
-                    }}
-                    onChange={(nextPagination) => {
-                      loadContracts(nextPagination.current, nextPagination.pageSize)
-                    }}
-                  />
-                </Card>
+                          <Form.Item label="Código">
+                            <Input disabled value={editingInst.codigo_instituicao} />
+                          </Form.Item>
+                          <Form.Item
+                            name="nome_instituicao"
+                            label="Nome"
+                            rules={[{ required: true, message: 'Nome é obrigatório' }]}
+                          >
+                            <Input />
+                          </Form.Item>
+                          <Form.Item name="status" label="Status">
+                            <Select
+                              options={[
+                                { value: 1, label: 'Ativo' },
+                                { value: 0, label: 'Inativo' },
+                              ]}
+                            />
+                          </Form.Item>
+                          <Form.Item
+                            name="produtos"
+                            label="Produtos"
+                            rules={[{ required: true, message: 'Produtos é obrigatório' }]}
+                          >
+                            <Input />
+                          </Form.Item>
+                          <Text strong style={{ display: 'block', marginBottom: 8 }}>
+                            Contrato único
+                          </Text>
+                          <Form.Item name="numero_contrato" label="Número do Contrato">
+                            <Input placeholder="Ex: CW40194" />
+                          </Form.Item>
+                          <Form.Item name="dt_ini" label="Data Início">
+                            <Input placeholder="YYYY-MM-DD" />
+                          </Form.Item>
+                          <Form.Item name="dt_fim" label="Data Fim">
+                            <Input placeholder="YYYY-MM-DD" />
+                          </Form.Item>
+                          <Form.Item name="num_ac_contratados" label="Qtde. Acessos Contratados">
+                            <InputNumber style={{ width: '100%' }} min={0} />
+                          </Form.Item>
+                          <Form.Item
+                            name="tp_acessos"
+                            label="Tipo de Acesso"
+                            rules={[{ required: true, message: 'Tipo de acesso é obrigatório' }]}
+                          >
+                            <Input />
+                          </Form.Item>
+                          <Text strong style={{ display: 'block', marginBottom: 8 }}>
+                            Configuração de resultado
+                          </Text>
+                          <Form.Item name="numero_linhas_resultado" label="Número de Linhas">
+                            <InputNumber style={{ width: '100%' }} min={0} />
+                          </Form.Item>
+                          <Form.Item>
+                            <Space>
+                              <Button type="primary" htmlType="submit" loading={savingInst}>
+                                Salvar
+                              </Button>
+                              <Button onClick={handleCloseDrawer}>Cancelar</Button>
+                            </Space>
+                          </Form.Item>
+                        </Form>
+                      )}
+                    </Drawer>
+                  </>
+                )}
               </div>
             </Content>
           </Layout>
