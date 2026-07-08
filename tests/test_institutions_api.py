@@ -17,7 +17,6 @@ def _make_inst(**overrides) -> MagicMock:
         "dt_ini": datetime(2026, 1, 1),
         "dt_fim": datetime(2026, 12, 31),
         "status": 1,
-        "produtos": "flex,gov",
         "tp_acessos": "Individual, Lote",
         "num_ac_contratados": Decimal("50000"),
         "numero_linhas_resultado": None,

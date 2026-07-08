@@ -94,7 +94,7 @@ function App() {
   const [instTotal, setInstTotal] = useState(0)
   const [instLoading, setInstLoading] = useState(false)
   const [instError, setInstError] = useState(null)
-  const [instFilters, setInstFilters] = useState({ q: '' })
+  const [instFilters, setInstFilters] = useState({ q: '', status: null })
   const [instPagination, setInstPagination] = useState({ current: 1, pageSize: 20 })
   const [editingInst, setEditingInst] = useState(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -157,6 +157,9 @@ function App() {
     try {
       const params = new URLSearchParams({ page, page_size: pageSize })
       if (instFilters.q) params.set('q', instFilters.q)
+      if (instFilters.status !== null && instFilters.status !== undefined) {
+        params.set('status', instFilters.status)
+      }
       const response = await fetch(`/api/institutions?${params.toString()}`, {
         headers: authHeaders(token),
       })
@@ -291,7 +294,7 @@ function App() {
       render: (v) =>
         v === 1 ? <Tag color="green">Ativo</Tag> : <Tag color="default">Inativo</Tag>,
     },
-    { title: 'Produtos', dataIndex: 'produtos', key: 'produtos', width: 120 },
+
     {
       title: 'Ações',
       key: 'actions',
@@ -492,7 +495,24 @@ function App() {
                             placeholder="Código, nome ou contrato"
                             prefix={<SearchOutlined />}
                             value={instFilters.q}
-                            onChange={(e) => setInstFilters({ q: e.target.value })}
+                            onChange={(e) => setInstFilters({ ...instFilters, q: e.target.value })}
+                          />
+                        </Form.Item>
+                        <Form.Item label="Status">
+                          <Select
+                            allowClear
+                            placeholder="Todos"
+                            value={instFilters.status}
+                            onChange={(value) =>
+                              setInstFilters({
+                                ...instFilters,
+                                status: value !== undefined ? value : null,
+                              })
+                            }
+                            options={[
+                              { value: 1, label: 'Ativo' },
+                              { value: 0, label: 'Inativo' },
+                            ]}
                           />
                         </Form.Item>
                         <Form.Item label=" ">
@@ -502,7 +522,7 @@ function App() {
                             </Button>
                             <Button
                               onClick={() => {
-                                setInstFilters({ q: '' })
+                                setInstFilters({ q: '', status: null })
                                 setTimeout(() => loadInstitutions(1, instPagination.pageSize), 0)
                               }}
                             >
@@ -554,7 +574,7 @@ function App() {
                             dt_ini: editingInst.dt_ini ? editingInst.dt_ini.split('T')[0] : '',
                             dt_fim: editingInst.dt_fim ? editingInst.dt_fim.split('T')[0] : '',
                             status: editingInst.status,
-                            produtos: editingInst.produtos,
+
                             tp_acessos: editingInst.tp_acessos,
                             num_ac_contratados: editingInst.num_ac_contratados,
                             numero_linhas_resultado: editingInst.numero_linhas_resultado,
@@ -579,13 +599,7 @@ function App() {
                               ]}
                             />
                           </Form.Item>
-                          <Form.Item
-                            name="produtos"
-                            label="Produtos"
-                            rules={[{ required: true, message: 'Produtos é obrigatório' }]}
-                          >
-                            <Input />
-                          </Form.Item>
+
                           <Text strong style={{ display: 'block', marginBottom: 8 }}>
                             Contrato único
                           </Text>

@@ -9,7 +9,6 @@ ALLOWED_FIELDS = {
     "dt_ini": "DT_INI",
     "dt_fim": "DT_FIM",
     "status": "STATUS",
-    "produtos": "PRODUTOS",
     "tp_acessos": "TP_ACESSOS",
     "num_ac_contratados": "NUM_AC_CONTRATADOS",
     "numero_linhas_resultado": "NUMERO_LINHAS_RESULTADO",
@@ -30,7 +29,6 @@ def _to_dict(inst: Instituicao) -> dict:
         "dt_ini": inst.dt_ini.isoformat() if inst.dt_ini else None,
         "dt_fim": inst.dt_fim.isoformat() if inst.dt_fim else None,
         "status": inst.status,
-        "produtos": inst.produtos,
         "tp_acessos": inst.tp_acessos,
         "num_ac_contratados": inst.num_ac_contratados,
         "numero_linhas_resultado": (
@@ -46,7 +44,11 @@ class InstitutionRepository:
         self.db = db
 
     def list_institutions(
-        self, q: str | None = None, page: int = 1, page_size: int = 20
+        self,
+        q: str | None = None,
+        status: int | None = None,
+        page: int = 1,
+        page_size: int = 20,
     ) -> dict:
         page = max(page, 1)
         page_size = min(max(page_size, 1), 100)
@@ -61,6 +63,9 @@ class InstitutionRepository:
                 | Instituicao.nome_instituicao.like(like)
                 | Instituicao.numero_contrato.like(like)
             )
+
+        if status is not None:
+            base = base.where(Instituicao.status == status)
 
         total = self.db.scalar(select(func.count()).select_from(base.subquery()))
         items = (

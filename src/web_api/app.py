@@ -48,13 +48,14 @@ def list_contracts(
 @app.get("/api/institutions", dependencies=[Depends(require_auth)])
 def list_institutions(
     q: str | None = None,
+    status: int | None = Query(default=None, ge=0, le=1),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     db: Session = Depends(get_db),
 ):
     try:
         return InstitutionRepository(db).list_institutions(
-            q=q, page=page, page_size=page_size
+            q=q, status=status, page=page, page_size=page_size
         )
     except RuntimeError as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
