@@ -68,7 +68,10 @@ class ContractRepository:
         page_size = min(max(page_size, 1), 100)
         offset = (page - 1) * page_size
 
-        base = select(Contrato).join(Instituicao)
+        base = select(Contrato, Instituicao).join(
+            Instituicao,
+            Contrato.codigo_instituicao == Instituicao.codigo_instituicao,
+        )
 
         if q:
             like = f"%{q.strip()}%"
