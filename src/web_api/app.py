@@ -116,6 +116,17 @@ def delete_service(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
+@app.post("/api/institutions", dependencies=[Depends(require_auth)])
+def create_institution(
+    data: dict,
+    db: Session = Depends(get_db),
+):
+    try:
+        return InstitutionRepository(db).create_institution(data)
+    except RuntimeError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
 @app.put("/api/institutions/{codigo}", dependencies=[Depends(require_auth)])
 def update_institution(
     codigo: int,

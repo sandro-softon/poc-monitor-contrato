@@ -103,6 +103,65 @@ class InstitutionRepository:
             return None
         return _to_dict(inst)
 
+    def create_institution(self, data: dict) -> dict:
+        codigo = data.get("codigo_instituicao")
+        if not codigo:
+            raise RuntimeError("codigo_instituicao é obrigatório")
+        nome = data.get("nome_instituicao")
+        if not nome:
+            raise RuntimeError("nome_instituicao é obrigatório")
+
+        from sqlalchemy import insert
+
+        inst_values = {
+            "COD_INSTITUICAO": codigo,
+            "NOME_INSTITUICAO": nome,
+            "NUM_CONTRATO": data.get("numero_contrato"),
+            "DT_INI": data.get("dt_ini"),
+            "DT_FIM": data.get("dt_fim"),
+            "COD_COMPARTILHADO": data.get("cod_compartilhado"),
+            "DT_CORTE_INICIAL": data.get("dt_corte_inicial"),
+            "FREQUENCIA_CORTE": data.get("frequencia_corte"),
+            "NUM_AC_CONTRATADOS": data.get("num_ac_contratados"),
+            "TP_ACESSOS": data.get("tp_acessos", "Individual"),
+            "PRODUTOS": data.get("produtos", "flex,gov"),
+            "STATUS": data.get("status", 1),
+            "NUMERO_LINHAS_RESULTADO": data.get("numero_linhas_resultado"),
+            "QT_MONITORAMENTO": 0,
+            "FL_PESQUISA_INDIVUDUAL": 1,
+            "FL_DADOS_COMPLEMENTARES": 0,
+            "FL_POWER_MATCH": b'\x00',
+            "TXT_VALID_IP": "*",
+        }
+        inst_values = {k: v for k, v in inst_values.items() if v is not None}
+        self.db.execute(insert(Instituicao.__table__).values(**inst_values))
+        self.db.commit()
+
+        servicos = data.get("servicos", [])
+        for svc in servicos:
+            servico = svc.get("servico", "")
+            if not servico:
+                continue
+            self.db.execute(
+                insert(Contrato.__table__).values(
+                    COD_INSTITUICAO=codigo,
+                    NUM_CONTRATO=data.get("numero_contrato"),
+                    DT_INI=data.get("dt_ini"),
+                    DT_FIM=data.get("dt_fim"),
+                    COD_COMPARTILHADO=data.get("cod_compartilhado"),
+                    DT_CORTE_INICIAL=data.get("dt_corte_inicial"),
+                    FREQUENCIA_CORTE=data.get("frequencia_corte"),
+                    SERVICOS_CONTRATADOS=servico,
+                    NUM_AC_CONTRATADOS=svc.get("num_ac_contratados"),
+                    FL_ACESSOS_ILIMITADOS=svc.get("fl_acessos_ilimitados", 0),
+                    VALOR_EXCEDENTE=svc.get("valor_excedente"),
+                    FL_MONITORAR_CONTRATO=1,
+                )
+            )
+        self.db.commit()
+
+        return self.get_institution(codigo)
+
     def update_institution(self, codigo: int, data: dict) -> dict:
         values = {
             db_col: data[json_key]

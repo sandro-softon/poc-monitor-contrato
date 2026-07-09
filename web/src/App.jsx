@@ -94,6 +94,7 @@ function App() {
   const [instFilters, setInstFilters] = useState({ q: '', status: 1 })
   const [instPagination, setInstPagination] = useState({ current: 1, pageSize: 20 })
   const [editingInst, setEditingInst] = useState(null)
+  const [creatingNew, setCreatingNew] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [savingInst, setSavingInst] = useState(false)
 
@@ -265,7 +266,26 @@ function App() {
     }
   }
 
+  function handleNewInstitution() {
+    setCreatingNew(true)
+    setEditingInst({
+      codigo_instituicao: null,
+      nome_instituicao: '',
+      numero_contrato: '',
+      dt_ini: null,
+      dt_fim: null,
+      cod_compartilhado: null,
+      dt_corte_inicial: null,
+      frequencia_corte: null,
+      status: 1,
+      num_ac_contratados: null,
+      numero_linhas_resultado: null,
+    })
+    setDrawerOpen(true)
+  }
+
   function handleEditInstitution(record) {
+    setCreatingNew(false)
     setEditingInst({ ...record })
     setDrawerOpen(true)
   }
@@ -273,6 +293,7 @@ function App() {
   function handleCloseDrawer() {
     setDrawerOpen(false)
     setEditingInst(null)
+    setCreatingNew(false)
   }
 
   async function handleSaveInstitution(values) {
@@ -284,16 +305,29 @@ function App() {
         if (value === '' || value === null || value === undefined) continue
         body[key] = value?.format ? value.format('YYYY-MM-DD') : value
       }
-      const response = await fetch(`/api/institutions/${editingInst.codigo_instituicao}`, {
-        method: 'PUT',
-        headers: { ...authHeaders(token), 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}))
-        throw new Error(data.detail || 'Erro ao salvar')
+      if (creatingNew && body.codigo_instituicao) {
+        const response = await fetch(`/api/institutions`, {
+          method: 'POST',
+          headers: { ...authHeaders(token), 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}))
+          throw new Error(data.detail || 'Erro ao criar')
+        }
+        message.success('Instituição criada com sucesso')
+      } else {
+        const response = await fetch(`/api/institutions/${editingInst.codigo_instituicao}`, {
+          method: 'PUT',
+          headers: { ...authHeaders(token), 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}))
+          throw new Error(data.detail || 'Erro ao salvar')
+        }
+        message.success('Instituição atualizada com sucesso')
       }
-      message.success('Instituição atualizada com sucesso')
       await loadInstitutions()
       handleCloseDrawer()
     } catch (err) {
@@ -563,6 +597,11 @@ function App() {
                 {activePage === 'contracts' && (
                   <Button type="primary" icon={<PlusOutlined />} disabled>
                     Novo contrato
+                  </Button>
+                )}
+                {activePage === 'institutions' && (
+                  <Button type="primary" icon={<PlusOutlined />} onClick={handleNewInstitution}>
+                    Nova Instituição
                   </Button>
                 )}
                 <Button icon={<LogoutOutlined />} onClick={() => setToken(null)}>
@@ -835,7 +874,11 @@ function App() {
                       />
                     </Card>
                     <Drawer
-                      title={`Editar Instituição - ${editingInst?.codigo_instituicao || ''}`}
+                      title={
+                        creatingNew
+                          ? 'Nova Instituição'
+                          : `Editar Instituição - ${editingInst?.codigo_instituicao || ''}`
+                      }
                       open={drawerOpen}
                       onClose={handleCloseDrawer}
                       width={520}
@@ -844,6 +887,7 @@ function App() {
                         <Form
                           layout="vertical"
                           initialValues={{
+                            codigo_instituicao: editingInst.codigo_instituicao,
                             nome_instituicao: editingInst.nome_instituicao,
                             numero_contrato: editingInst.numero_contrato,
                             dt_ini: editingInst.dt_ini ? dayjs(editingInst.dt_ini.split('T')[0]) : null,
@@ -859,8 +903,12 @@ function App() {
                           }}
                           onFinish={handleSaveInstitution}
                         >
-                          <Form.Item label="Código">
-                            <Input disabled value={editingInst.codigo_instituicao} />
+                          <Form.Item
+                            name="codigo_instituicao"
+                            label="Código"
+                            rules={[{ required: true, message: 'Código é obrigatório' }]}
+                          >
+                            <Input disabled={!creatingNew} />
                           </Form.Item>
                           <Form.Item
                             name="nome_instituicao"
