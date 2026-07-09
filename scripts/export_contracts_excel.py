@@ -62,21 +62,33 @@ def _accesses(row: dict[str, Any]) -> Any:
 def _fetch_contracts() -> list[dict[str, Any]]:
     query = """
         SELECT
-            c.COD_INSTITUICAO,
-            c.COD_COMPARTILHADO,
+            i.COD_INSTITUICAO,
+            i.COD_COMPARTILHADO,
             i.NOME_INSTITUICAO,
-            c.SERVICOS_CONTRATADOS,
+            GROUP_CONCAT(
+                c.SERVICOS_CONTRATADOS
+                ORDER BY c.SERVICOS_CONTRATADOS
+                SEPARATOR ', '
+            ) AS SERVICOS_CONTRATADOS,
             i.NUM_CONTRATO,
-            c.VALOR_EXCEDENTE,
-            c.DT_CORTE_INICIAL,
+            MAX(c.VALOR_EXCEDENTE) AS VALOR_EXCEDENTE,
+            i.DT_CORTE_INICIAL,
             i.DT_FIM,
-            c.FREQUENCIA_CORTE,
-            c.NUM_AC_CONTRATADOS,
-            c.FL_ACESSOS_ILIMITADOS
-        FROM TB_CONTRATO c
-        JOIN TB_INSTITUICAO i
-          ON i.COD_INSTITUICAO = c.COD_INSTITUICAO
-        ORDER BY c.COD_INSTITUICAO, i.NUM_CONTRATO, c.SERVICOS_CONTRATADOS
+            i.FREQUENCIA_CORTE,
+            MAX(c.NUM_AC_CONTRATADOS) AS NUM_AC_CONTRATADOS,
+            MAX(c.FL_ACESSOS_ILIMITADOS) AS FL_ACESSOS_ILIMITADOS
+        FROM TB_INSTITUICAO i
+        JOIN TB_CONTRATO c
+          ON c.COD_INSTITUICAO = i.COD_INSTITUICAO
+        GROUP BY
+            i.COD_INSTITUICAO,
+            i.COD_COMPARTILHADO,
+            i.NOME_INSTITUICAO,
+            i.NUM_CONTRATO,
+            i.DT_CORTE_INICIAL,
+            i.DT_FIM,
+            i.FREQUENCIA_CORTE
+        ORDER BY i.NOME_INSTITUICAO
     """
     conn = None
     cursor = None

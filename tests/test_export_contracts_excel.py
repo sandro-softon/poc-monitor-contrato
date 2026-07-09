@@ -77,10 +77,11 @@ def test_export_contracts_excel_exports_all_contracts(monkeypatch, tmp_path):
     assert total == 2
     assert [worksheet.cell(1, column).value for column in range(1, 12)] == COLUMNS
     assert worksheet.auto_filter.ref == "A1:M3"
-    assert "FL_MONITORAR_CONTRATO" not in connection.cursor_instance.query
-    assert "WHERE" not in connection.cursor_instance.query.upper()
-    assert "i.NUM_CONTRATO" in connection.cursor_instance.query
-    assert "i.DT_FIM" in connection.cursor_instance.query
+    assert "GROUP_CONCAT" in connection.cursor_instance.query.upper()
+    assert "GROUP BY" in connection.cursor_instance.query.upper()
+    assert "FROM TB_INSTITUICAO" in connection.cursor_instance.query.upper()
+    assert "MAX(C.VALOR_EXCEDENTE)" in connection.cursor_instance.query.upper()
+    assert "FL_ACESSOS_ILIMITADOS" in connection.cursor_instance.query.upper()
 
     assert worksheet["A2"].value == 123
     assert worksheet["B2"].value is None
