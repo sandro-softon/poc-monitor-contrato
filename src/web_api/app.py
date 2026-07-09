@@ -101,6 +101,21 @@ def get_institution(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
+@app.delete("/api/contracts/{codigo}/services/{id_servico}", dependencies=[Depends(require_auth)])
+def delete_service(
+    codigo: int,
+    id_servico: int,
+    db: Session = Depends(get_db),
+):
+    try:
+        result = ContractRepository(db).delete_service(codigo, id_servico)
+        if "error" in result:
+            raise HTTPException(status_code=404, detail=result["error"])
+        return result
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
 @app.put("/api/institutions/{codigo}", dependencies=[Depends(require_auth)])
 def update_institution(
     codigo: int,

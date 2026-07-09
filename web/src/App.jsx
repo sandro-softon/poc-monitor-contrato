@@ -13,6 +13,7 @@ import {
   Input,
   InputNumber,
   Layout,
+  Popconfirm,
   Select,
   Space,
   Table,
@@ -207,6 +208,22 @@ function App() {
     const servicos = [...editingContract.servicos]
     servicos[index] = { ...servicos[index], [field]: value }
     setEditingContract({ ...editingContract, servicos })
+  }
+
+  async function handleDeleteService(servicoId) {
+    if (!editingContract) return
+    try {
+      const response = await fetch(
+        `/api/contracts/${editingContract.codigo_instituicao}/services/${servicoId}`,
+        { method: 'DELETE', headers: authHeaders(token) }
+      )
+      if (!response.ok) throw new Error('Erro ao excluir serviço')
+      const updated = await response.json()
+      setEditingContract(updated)
+      message.success('Serviço desativado')
+    } catch (err) {
+      message.error(err.message)
+    }
   }
 
   async function handleSaveContract(values) {
@@ -423,18 +440,29 @@ function App() {
       title: '',
       key: 'actions',
       width: 50,
-      render: (_, record, index) => (
-        <Button
-          type="text"
-          size="small"
-          danger
-          icon={<DeleteOutlined />}
-          onClick={() => {
-            const servicos = editingContract.servicos.filter((_, i) => i !== index)
-            setEditingContract({ ...editingContract, servicos })
-          }}
-        />
-      ),
+      render: (_, record, index) =>
+        record.id ? (
+          <Popconfirm
+            title="Desativar serviço"
+            description={`Desativar o serviço "${record.servico}"?`}
+            onConfirm={() => handleDeleteService(record.id)}
+            okText="Confirmar"
+            cancelText="Cancelar"
+          >
+            <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+          </Popconfirm>
+        ) : (
+          <Button
+            type="text"
+            size="small"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() => {
+              const servicos = editingContract.servicos.filter((_, i) => i !== index)
+              setEditingContract({ ...editingContract, servicos })
+            }}
+          />
+        ),
     },
   ]
 

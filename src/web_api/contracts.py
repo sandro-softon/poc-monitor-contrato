@@ -266,3 +266,15 @@ class ContractRepository:
                 self.db.commit()
 
         return self.get_contract_detail(codigo)
+
+    def delete_service(self, codigo_instituicao: int, id_servico: int) -> dict:
+        svc = self.db.get(Contrato, id_servico)
+        if not svc or svc.codigo_instituicao != codigo_instituicao:
+            return {"error": "Serviço não encontrado"}
+        self.db.execute(
+            update(Contrato)
+            .where(Contrato.id_contrato == id_servico)
+            .values(fl_monitorar_contrato=0, num_ac_contratados=None, valor_excedente=None)
+        )
+        self.db.commit()
+        return self.get_contract_detail(codigo_instituicao)
