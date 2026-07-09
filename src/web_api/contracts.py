@@ -134,7 +134,7 @@ class ContractRepository:
         items = (
             self.db.scalars(
                 base.order_by(Instituicao.nome_instituicao)
-                .distinct()
+                .group_by(Instituicao.codigo_instituicao)
                 .offset(offset)
                 .limit(page_size)
             )
@@ -251,16 +251,15 @@ class ContractRepository:
                     self.db.execute(insert(Contrato).values(**insert_values))
                     self.db.commit()
 
-            existing_ids = {
-                row.id_contrato
-                for row in self.db.execute(
+            existing_ids = set(
+                self.db.execute(
                     select(Contrato.id_contrato).where(
                         Contrato.codigo_instituicao == codigo
                     )
                 )
                 .scalars()
                 .all()
-            }
+            )
             to_delete = existing_ids - incoming_ids
             if to_delete:
                 self.db.execute(
