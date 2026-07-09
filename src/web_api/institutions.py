@@ -114,6 +114,7 @@ class InstitutionRepository:
                 update(Instituicao)
                 .where(Instituicao.codigo_instituicao == codigo)
                 .values(**values)
+                .execution_options(synchronize_session=False)
             )
             self.db.commit()
 
@@ -131,5 +132,6 @@ class InstitutionRepository:
                 update(Contrato)
                 .where(Contrato.codigo_instituicao == codigo)
                 .values(**values)
+                .execution_options(synchronize_session=False)
             )
             self.db.commit()

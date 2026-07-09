@@ -187,6 +187,7 @@ class ContractRepository:
                 update(Instituicao)
                 .where(Instituicao.codigo_instituicao == codigo)
                 .values(**general_values)
+                .execution_options(synchronize_session=False)
             )
             self.db.commit()
 
@@ -200,6 +201,7 @@ class ContractRepository:
                     update(Contrato)
                     .where(Contrato.codigo_instituicao == codigo)
                     .values(**sync_values)
+                    .execution_options(synchronize_session=False)
                 )
                 self.db.commit()
 
@@ -224,6 +226,7 @@ class ContractRepository:
                             update(Contrato)
                             .where(Contrato.id_contrato == svc_id)
                             .values(**svc_values)
+                            .execution_options(synchronize_session=False)
                         )
                         self.db.commit()
                 elif svc_id is None or svc_id == 0:
