@@ -144,3 +144,10 @@ WHERE NOT (i.NUM_CONTRATO <=> src.NUM_CONTRATO);
 -- REPETIR PARA 'Individual, API'  (inserir API)
 --
 -- Detalhes completos em: sql/normalizar_servicos.sql
+
+-- =========================================================
+-- BLOCO H: Chave unica (COD_INSTITUICAO + SERVICOS_CONTRATADOS)
+-- =========================================================
+ALTER TABLE TB_CONTRATO
+ADD CONSTRAINT UK_TB_CONTRATO_SERVICO
+UNIQUE (COD_INSTITUICAO, SERVICOS_CONTRATADOS);
