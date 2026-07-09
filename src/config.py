@@ -29,7 +29,7 @@ class Config:
     EXCEL_PATH = os.getenv("EXCEL_PATH", "docs/Softon_Controle de acessos_clientes_VF.xlsx")
     # Optional: especificar nome da sheet a ser lida (ex: 'Sheet1')
     EXCEL_SHEET = os.getenv("EXCEL_SHEET", None)
-    CONTRACT_SOURCE = os.getenv("CONTRACT_SOURCE", "excel").strip().lower()
+    CONTRACT_SOURCE = os.getenv("CONTRACT_SOURCE", "db").strip().lower()
     LOG_DIR = os.getenv("LOG_DIR", "logs")
     LOG_RETENTION_DAYS = int(os.getenv("LOG_RETENTION_DAYS", 30))
     WEB_ADMIN_USER = os.getenv("WEB_ADMIN_USER", "admin")
