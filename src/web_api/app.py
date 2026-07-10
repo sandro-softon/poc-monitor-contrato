@@ -31,7 +31,6 @@ def auth_login(data: LoginRequest, db: Session = Depends(get_db)):
 @app.get("/api/contracts", dependencies=[Depends(require_auth)])
 def list_contracts(
     q: str | None = None,
-    service: str | None = None,
     monitorar: int | None = Query(default=None, ge=0, le=1),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
@@ -39,7 +38,7 @@ def list_contracts(
 ):
     try:
         return ContractRepository(db).list_contracts(
-            q=q, service=service, monitorar=monitorar, page=page, page_size=page_size
+            q=q, monitorar=monitorar, page=page, page_size=page_size
         )
     except RuntimeError as e:
         raise HTTPException(status_code=500, detail=str(e)) from e

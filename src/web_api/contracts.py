@@ -1,4 +1,4 @@
-from sqlalchemy import cast, delete as sa_delete, func, insert, select, String, update
+from sqlalchemy import cast, delete as sa_delete, func, insert, select, String, text, update
 from sqlalchemy.orm import Session
 
 from src.db.models import Contrato, Instituicao
@@ -20,7 +20,7 @@ def normalize_services(value: str) -> str:
     return ", ".join(service for service in SERVICE_ORDER if service in services)
 
 
-def _inst_to_dict(inst: Instituicao) -> dict:
+def _inst_to_dict(inst: Instituicao, servicos: list[str] | None = None) -> dict:
     return {
         "codigo_instituicao": int(inst.codigo_instituicao),
         "nome_instituicao": inst.nome_instituicao,
@@ -37,6 +37,7 @@ def _inst_to_dict(inst: Instituicao) -> dict:
         ),
         "frequencia_corte": inst.frequencia_corte,
         "status": inst.status,
+        "servicos": servicos or [],
     }
 
 
@@ -60,7 +61,6 @@ class ContractRepository:
     def list_contracts(
         self,
         q: str | None = None,
-        service: str | None = None,
         monitorar: int | None = None,
         page: int = 1,
         page_size: int = 20,
@@ -69,80 +69,70 @@ class ContractRepository:
         page_size = min(max(page_size, 1), 100)
         offset = (page - 1) * page_size
 
-        base = select(Instituicao).join(
-            Contrato,
-            Contrato.codigo_instituicao == Instituicao.codigo_instituicao,
-        )
+        codes_where = []
+        params: dict = {}
 
         if q:
             like = f"%{q.strip()}%"
-            base = base.where(
-                cast(Instituicao.codigo_instituicao, String).like(like)
-                | Instituicao.nome_instituicao.like(like)
-                | Instituicao.numero_contrato.like(like)
+            codes_where.append(
+                "(CAST(i.COD_INSTITUICAO AS CHAR) LIKE :q1 "
+                "OR i.NOME_INSTITUICAO LIKE :q2 "
+                "OR i.NUM_CONTRATO LIKE :q3)"
             )
+            params["q1"] = like
+            params["q2"] = like
+            params["q3"] = like
 
         if monitorar is not None:
-            base = base.where(Contrato.fl_monitorar_contrato == monitorar)
+            codes_where.append("c.FL_MONITORAR_CONTRATO = :mon")
+            params["mon"] = monitorar
 
-        normalized_service = normalize_services(service or "")
-        if normalized_service:
-            for item in normalized_service.split(", "):
-                base = base.where(
-                    func.find_in_set(
-                        item,
-                        func.replace(
-                            Contrato.servicos_contratados, ", ", ","
-                        ),
-                    )
-                )
+        where_sql = f"WHERE {' AND '.join(codes_where)}" if codes_where else ""
 
-        count_subq = (
-            select(Instituicao.codigo_instituicao)
-            .join(
-                Contrato,
-                Contrato.codigo_instituicao == Instituicao.codigo_instituicao,
-            )
-            .distinct()
-        )
-        if q:
-            like = f"%{q.strip()}%"
-            count_subq = count_subq.where(
-                cast(Instituicao.codigo_instituicao, String).like(like)
-                | Instituicao.nome_instituicao.like(like)
-                | Instituicao.numero_contrato.like(like)
-            )
-        if monitorar is not None:
-            count_subq = count_subq.where(
-                Contrato.fl_monitorar_contrato == monitorar
-            )
-        nsvc = normalize_services(service or "")
-        if nsvc:
-            for item in nsvc.split(", "):
-                count_subq = count_subq.where(
-                    func.find_in_set(
-                        item,
-                        func.replace(
-                            Contrato.servicos_contratados, ", ", ","
-                        ),
-                    )
-                )
+        count_sql = f"""
+            SELECT COUNT(DISTINCT i.COD_INSTITUICAO)
+            FROM TB_INSTITUICAO i
+            JOIN TB_CONTRATO c ON c.COD_INSTITUICAO = i.COD_INSTITUICAO
+            {where_sql}
+        """
+        total = self.db.execute(text(count_sql), params).scalar()
 
-        total = self.db.scalar(
-            select(func.count()).select_from(count_subq.subquery())
-        )
-        items = (
-            self.db.scalars(
-                base.order_by(Instituicao.nome_instituicao)
-                .group_by(Instituicao.codigo_instituicao)
-                .offset(offset)
-                .limit(page_size)
-            )
-            .all()
-        )
+        data_sql = f"""
+            SELECT
+                i.COD_INSTITUICAO,
+                GROUP_CONCAT(c.SERVICOS_CONTRATADOS
+                    ORDER BY c.SERVICOS_CONTRATADOS SEPARATOR ', '
+                ) AS SERVICOS
+            FROM TB_INSTITUICAO i
+            JOIN TB_CONTRATO c ON c.COD_INSTITUICAO = i.COD_INSTITUICAO
+            {where_sql}
+            GROUP BY i.COD_INSTITUICAO
+            ORDER BY i.NOME_INSTITUICAO
+            LIMIT :lim OFFSET :off
+        """
+        params["lim"] = page_size
+        params["off"] = offset
+        rows = self.db.execute(text(data_sql), params).fetchall()
+        servicos_map = {row[0]: row[1] for row in rows}
+
+        inst_codes = list(servicos_map.keys())
+        if not inst_codes:
+            return {"items": [], "total": 0, "page": page, "page_size": page_size}
+
+        insts = self.db.scalars(
+            select(Instituicao)
+            .where(Instituicao.codigo_instituicao.in_(inst_codes))
+            .order_by(Instituicao.nome_instituicao)
+        ).all()
 
         return {
-            "items": [_inst_to_dict(inst) for inst in items],
+            "items": [
+                _inst_to_dict(
+                    inst,
+                    servicos=servicos_map.get(int(inst.codigo_instituicao), "").split(", "),
+                )
+                for inst in insts
+            ],
             "total": total or 0,
             "page": page,
             "page_size": page_size,

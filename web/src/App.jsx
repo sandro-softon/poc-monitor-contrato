@@ -101,7 +101,7 @@ function App() {
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [filters, setFilters] = useState({ q: '', service: [] })
+  const [filters, setFilters] = useState({ q: '' })
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20 })
 
   const [institutions, setInstitutions] = useState([])
@@ -149,7 +149,6 @@ function App() {
     try {
       const params = new URLSearchParams({ page, page_size: pageSize })
       if (filters.q) params.set('q', filters.q)
-      if (filters.service?.length) params.set('service', filters.service.join(','))
 
       const response = await fetch(`/api/contracts?${params.toString()}`, {
         headers: authHeaders(token),
@@ -376,6 +375,21 @@ function App() {
     { title: 'Fim', dataIndex: 'dt_fim', key: 'dt_fim', render: formatDate, width: 100 },
     { title: 'Corte', dataIndex: 'dt_corte_inicial', key: 'dt_corte_inicial', render: formatDate, width: 100 },
     { title: 'Freq.', dataIndex: 'frequencia_corte', key: 'frequencia_corte', width: 90 },
+    {
+      title: 'Serviços',
+      dataIndex: 'servicos',
+      key: 'servicos',
+      width: 180,
+      render: (value) => (
+        <Space wrap size={[4, 4]}>
+          {(value || []).map((item) => (
+            <Tag color={item === 'API' ? 'blue' : item === 'Lote' ? 'cyan' : 'purple'} key={item}>
+              {item}
+            </Tag>
+          ))}
+        </Space>
+      ),
+    },
     {
       title: 'Status',
       dataIndex: 'status',
@@ -644,19 +658,6 @@ function App() {
                             onChange={(e) => setFilters({ ...filters, q: e.target.value })}
                           />
                         </Form.Item>
-                        <Form.Item label="Serviço">
-                          <Select
-                            mode="multiple"
-                            allowClear
-                            placeholder="Todos"
-                            value={filters.service}
-                            onChange={(value) => setFilters({ ...filters, service: value })}
-                            options={['Individual', 'Lote', 'API'].map((value) => ({
-                              value,
-                              label: value,
-                            }))}
-                          />
-                        </Form.Item>
                         <Form.Item label=" ">
                           <Space>
                             <Button type="primary" htmlType="submit">
@@ -664,7 +665,7 @@ function App() {
                             </Button>
                             <Button
                               onClick={() => {
-                                setFilters({ q: '', service: [] })
+                                setFilters({ q: '' })
                                 setTimeout(() => loadContracts(1, pagination.pageSize), 0)
                               }}
                             >
