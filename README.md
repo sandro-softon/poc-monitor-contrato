@@ -1,10 +1,112 @@
-# Monitor de Contratos (POC)
+# Monitor de Contratos
 
-Ferramenta de automação para monitoramento de vencimento e consumo de contratos, com notificações via e-mail.
+Ferramenta de automação para monitoramento de vencimento e consumo de contratos, com interface web para CRUD e notificações via e-mail.
 
-## Descrição
+## Instalação Rápida (Docker)
 
-O projeto realiza a leitura de uma planilha Excel contendo metadados de contratos e consulta um banco de dados MySQL para obter o consumo atualizado de cada contrato. Com base em thresholds configuráveis, o sistema identifica contratos próximos do vencimento ou com uso excessivo e envia alertas para os administradores.
+### Pré-requisitos
+
+- Git
+- Docker + Docker Compose
+- Acesso a um banco MySQL com as tabelas `TB_INSTITUICAO`, `TB_CONTRATO`, `TB_USUARIOS`
+
+### Passos
+
+```bash
+# 1. Clonar
+git clone <url-do-repositorio> monitor-contratos
+cd monitor-contratos
+
+# 2. Configurar ambiente
+cp .env.example .env
+# Editar .env com as credenciais do MySQL:
+#   DB_HOST, DB_USER, DB_PASS, DB_DATABASE
+#   SMTP_HOST, SMTP_USER, SMTP_PASS (para envio de e-mail)
+
+# 3. Subir
+docker compose up --build -d
+
+# 4. Acessar
+# Frontend: http://localhost:5173
+# API:      http://localhost:8000/api/health
+# Login:    usuário e senha da tabela TB_USUARIOS
+#           (COD_INSTITUICAO = 2007011801, STATUS = 1)
+```
+
+## Instalação Manual (sem Docker)
+
+### Pré-requisitos
+
+- Python >= 3.12
+- Node.js >= 24
+- MySQL acessível
+
+### Backend
+
+```bash
+# 1. Clonar
+git clone <url-do-repositorio> monitor-contratos
+cd monitor-contratos
+
+# 2. Ambiente Python
+pip install uv
+uv sync
+
+# 3. Configurar
+cp .env.example .env
+# Editar .env com credenciais MySQL e SMTP
+
+# 4. Iniciar API
+uv run uvicorn src.web_api.app:app --host 0.0.0.0 --port 8000
+```
+
+### Frontend
+
+```bash
+# Em outro terminal
+cd web
+npm install
+npm run dev
+```
+
+### CLI (processamento batch)
+
+```bash
+uv run python src/main.py --src db
+uv run python src/main.py --src db --test 2007020905
+```
+
+## Primeiro Acesso
+
+1. Acessar `http://localhost:5173`
+2. Logar com credenciais da `TB_USUARIOS` (ex: `admin` / `dtfasof02`)
+3. Navegar entre **Contratos** e **Instituições** no menu lateral
+4. Usar o seletor de temas no canto superior direito para alternar visual
+
+## Docker: Comandos Úteis
+
+```bash
+docker compose logs -f api    # Logs da API
+docker compose logs -f web    # Logs do frontend
+docker compose restart api    # Reiniciar API
+docker compose down           # Parar tudo
+```
+
+## Variáveis de Ambiente (.env)
+
+| Variável | Padrão | Descrição |
+|---|---|---|
+| `DB_HOST` | `localhost` | Host do MySQL |
+| `DB_USER` | `root` | Usuário MySQL |
+| `DB_PASS` | `""` | Senha MySQL |
+| `DB_DATABASE` | `meubanco` | Nome do banco |
+| `SMTP_HOST` | `127.0.0.1` | Servidor SMTP |
+| `SMTP_PORT` | `25` | Porta SMTP |
+| `SMTP_USER` | `""` | Usuário SMTP |
+| `EMAIL_FROM` | `monitor@localhost` | Remetente |
+| `EMAIL_TO` | `admin@localhost` | Destinatários (vírgula) |
+| `CONTRACT_SOURCE` | `db` | Fonte (`excel` ou `db`) |
+| `DEBUG` | `False` | Modo debug |
 
 ## Estrutura do Projeto
 
@@ -177,9 +279,21 @@ Casos já validados nesta base:
 | `2013032602` | `Individual, API` ilimitado soma `Individual + API`; limite aparece como `∞`; linha `Lote` exibe apenas `Lote`; `Valor Excedente` vazio aparece como `-`. |
 | `2010062401` | `Individual + Lote + API = 71.525`; limite `180.000`; consumo `39,74%`. |
 
-## Logs
+## POC Headroom
 
-O projeto usa logging em console e arquivo, com rotação diária e retenção.
+Se quiser testar compressão de contexto em um fluxo parecido com o deste projeto, rode a POC local:
+
+```bash
+uv run --with headroom-ai python scripts/headroom_poc.py
+```
+
+O script monta um payload representativo com logs, SQL e rascunho de e-mail, e imprime:
+
+- caracteres brutos vs comprimidos
+- tokens antes vs depois
+- tokens salvos e taxa de compressão
+- uma prévia do payload resultante
+
 
 Variáveis relevantes no `.env`:
 
