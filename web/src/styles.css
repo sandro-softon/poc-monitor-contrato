@@ -195,7 +195,7 @@ body {
   margin-bottom: 4px;
 }
 
-.ant-layout-sider-collapsed .side-item span {
+.ant-layout-sider-collapsed .side-item span:not(.anticon) {
   display: none;
 }
 
