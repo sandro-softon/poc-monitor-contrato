@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import dayjs from 'dayjs'
 import {
   Alert,
@@ -37,21 +37,93 @@ import ptBR from 'antd/locale/pt_BR'
 const { Header, Sider, Content } = Layout
 const { Title, Text } = Typography
 
-const darkTheme = {
-  algorithm: [theme.darkAlgorithm],
-  token: {
-    colorPrimary: '#1677ff',
-    colorBgBase: '#0b1020',
-    colorBgContainer: '#111827',
-    colorBorder: '#243044',
-    borderRadius: 14,
-    fontFamily:
-      'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+const stylePresets = {
+  dark: {
+    label: 'Dark Ops',
+    algorithms: [theme.darkAlgorithm],
+    tokens: {
+      colorPrimary: '#1677ff',
+      colorBgBase: '#0b1020',
+      colorBgContainer: '#111827',
+      colorBorder: '#243044',
+      borderRadius: 14,
+      fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
   },
-  components: {
-    Layout: { headerBg: '#111827', siderBg: '#111827', bodyBg: '#0b1020' },
-    Table: { headerBg: '#172033' },
-    Card: { headerFontSize: 15 },
+  light: {
+    label: 'Light SaaS',
+    algorithms: [theme.defaultAlgorithm],
+    tokens: {
+      colorPrimary: '#111827',
+      colorBgBase: '#f4f6fb',
+      colorBgContainer: '#ffffff',
+      colorBorder: '#e5e7eb',
+      borderRadius: 16,
+      fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
+  },
+  compact: {
+    label: 'Compact',
+    algorithms: [theme.darkAlgorithm, theme.compactAlgorithm],
+    tokens: {
+      colorPrimary: '#13c2c2',
+      colorBgBase: '#050b13',
+      colorBgContainer: '#0f172a',
+      colorBorder: '#1f2a3d',
+      borderRadius: 10,
+      fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
+  },
+  grafana: {
+    label: 'Grafana Dark',
+    algorithms: [theme.darkAlgorithm],
+    tableHeaderBg: '#181b1f',
+    tokens: {
+      colorPrimary: '#f46800',
+      colorInfo: '#5794f2',
+      colorSuccess: '#73bf69',
+      colorWarning: '#fade2a',
+      colorError: '#f2495c',
+      colorBgBase: '#0b0c0e',
+      colorBgContainer: '#111217',
+      colorBorder: '#2f3136',
+      borderRadius: 8,
+      fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
+  },
+  datadog: {
+    label: 'Datadog',
+    algorithms: [theme.defaultAlgorithm],
+    tableHeaderBg: '#f6f3fb',
+    tokens: {
+      colorPrimary: '#632ca6',
+      colorInfo: '#2f80ed',
+      colorSuccess: '#00a86b',
+      colorWarning: '#ffb020',
+      colorError: '#d12f2f',
+      colorBgBase: '#f7f5fb',
+      colorBgContainer: '#ffffff',
+      colorBorder: '#ded7eb',
+      borderRadius: 12,
+      fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    },
+  },
+  cartoon: {
+    label: 'Cartoon Style',
+    algorithms: [theme.defaultAlgorithm],
+    tableHeaderBg: '#fff0a8',
+    tokens: {
+      colorPrimary: '#ff5c8a',
+      colorInfo: '#0099ff',
+      colorSuccess: '#00b875',
+      colorWarning: '#ffb800',
+      colorError: '#ff3b30',
+      colorBgBase: '#fff7d6',
+      colorBgContainer: '#ffffff',
+      colorBorder: '#1f2937',
+      borderRadius: 22,
+      fontFamily: 'Nunito, "Comic Sans MS", ui-rounded, system-ui, sans-serif',
+    },
   },
 }
 
@@ -90,6 +162,33 @@ function formatNumber(value) {
 }
 
 function App() {
+  const [stylePreset, setStylePreset] = useState(
+    () => localStorage.getItem('monitor-contrato-style') || 'dark'
+  )
+  const activePreset = stylePresets[stylePreset] || stylePresets.dark
+  const isDarkStyle = ['dark', 'compact', 'grafana'].includes(stylePreset)
+
+  const antdTheme = useMemo(() => ({
+    algorithm: activePreset.algorithms,
+    token: activePreset.tokens,
+    components: {
+      Layout: {
+        headerBg: activePreset.tokens.colorBgContainer,
+        siderBg: activePreset.tokens.colorBgContainer,
+        bodyBg: activePreset.tokens.colorBgBase,
+      },
+      Table: {
+        headerBg: activePreset.tableHeaderBg || (isDarkStyle ? '#172033' : '#f8fafc'),
+      },
+      Card: { headerFontSize: 15 },
+    },
+  }), [activePreset, isDarkStyle])
+
+  function handleStylePresetChange(value) {
+    setStylePreset(value)
+    localStorage.setItem('monitor-contrato-style', value)
+  }
+
   const [token, setToken] = useState(null)
   const [username, setUsername] = useState('admin')
   const [password, setPassword] = useState('admin')
@@ -547,9 +646,9 @@ function App() {
 
   if (!token) {
     return (
-      <ConfigProvider locale={ptBR} theme={darkTheme}>
+      <ConfigProvider locale={ptBR} theme={antdTheme}>
         <AntApp>
-          <div className="login-page">
+          <div className={`login-page theme-${stylePreset}`}>
             <Card className="login-card" variant="borderless">
               <Space direction="vertical" size={22} style={{ width: '100%' }}>
                 <div>
@@ -592,9 +691,9 @@ function App() {
   }
 
   return (
-    <ConfigProvider locale={ptBR} theme={darkTheme}>
+    <ConfigProvider locale={ptBR} theme={antdTheme}>
       <AntApp>
-        <Layout className="app-shell">
+        <Layout className={`app-shell theme-${stylePreset}`}>
           <Sider width={252} className="app-sider" breakpoint="lg" collapsedWidth="0">
             <div className="brand-block">
               <div className="brand-mark">MC</div>
@@ -649,6 +748,16 @@ function App() {
                     Nova Instituição
                   </Button>
                 )}
+                <Select
+                  value={stylePreset}
+                  onChange={handleStylePresetChange}
+                  style={{ width: 160 }}
+                  size="small"
+                  options={Object.entries(stylePresets).map(([value, preset]) => ({
+                    value,
+                    label: preset.label,
+                  }))}
+                />
                 <Button icon={<LogoutOutlined />} onClick={() => setToken(null)}>
                   Sair
                 </Button>

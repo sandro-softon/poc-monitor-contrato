@@ -113,6 +113,74 @@ body {
   text-align: center;
 }
 
+.theme-grafana .brand-mark {
+  background: linear-gradient(135deg, #f46800, #fade2a);
+  box-shadow: 0 14px 35px rgba(244, 104, 0, 0.28);
+}
+
+.theme-grafana .app-header,
+.theme-grafana .app-sider {
+  border-color: rgba(244, 104, 0, 0.18);
+}
+
+.theme-datadog .brand-mark {
+  background: linear-gradient(135deg, #632ca6, #b56cff);
+  box-shadow: 0 14px 35px rgba(99, 44, 166, 0.24);
+}
+
+.theme-datadog .app-header,
+.theme-datadog .app-sider {
+  border-color: rgba(99, 44, 166, 0.16);
+}
+
+.theme-cartoon {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(255, 184, 0, 0.26), transparent 24%),
+    radial-gradient(circle at 88% 18%, rgba(0, 153, 255, 0.18), transparent 26%),
+    #fff7d6;
+}
+
+.theme-cartoon .brand-mark {
+  color: #1f2937;
+  background: linear-gradient(135deg, #ffde59, #ff5c8a 62%, #52d1ff);
+  border: 2px solid #1f2937;
+  border-radius: 16px;
+  box-shadow: 5px 5px 0 #1f2937;
+}
+
+.theme-cartoon .app-header,
+.theme-cartoon .app-sider,
+.theme-cartoon .panel-card,
+.theme-cartoon .login-card {
+  border-color: #1f2937 !important;
+}
+
+.theme-cartoon .panel-card,
+.theme-cartoon .login-card,
+.theme-cartoon .ant-card,
+.theme-cartoon .ant-table-wrapper,
+.theme-cartoon .ant-picker,
+.theme-cartoon .ant-select-selector,
+.theme-cartoon .ant-input,
+.theme-cartoon .ant-input-number,
+.theme-cartoon .ant-btn {
+  box-shadow: 4px 4px 0 rgba(31, 41, 55, 0.95) !important;
+}
+
+.theme-cartoon .ant-btn {
+  font-weight: 800;
+}
+
+.theme-cartoon .ant-btn-primary {
+  color: #1f2937;
+}
+
+.theme-cartoon .brand-title,
+.theme-cartoon .page-title,
+.theme-cartoon .ant-typography {
+  letter-spacing: -0.01em;
+}
+
 .login-page {
   display: grid;
   min-height: 100vh;
