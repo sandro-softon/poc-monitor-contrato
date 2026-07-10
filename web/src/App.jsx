@@ -553,7 +553,7 @@ function App() {
                 </Form>
                 {loginError && <Alert type="error" message={loginError} showIcon />}
                 <Text type="secondary" style={{ textAlign: 'center' }}>
-                  Usuário padrão: <b>admin</b> / Senha: <b>admin</b>
+                  Use suas credenciais do sistema
                 </Text>
               </Space>
             </Card>

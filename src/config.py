@@ -32,9 +32,7 @@ class Config:
     CONTRACT_SOURCE = os.getenv("CONTRACT_SOURCE", "db").strip().lower()
     LOG_DIR = os.getenv("LOG_DIR", "logs")
     LOG_RETENTION_DAYS = int(os.getenv("LOG_RETENTION_DAYS", 30))
-    WEB_ADMIN_USER = os.getenv("WEB_ADMIN_USER", "admin")
-    WEB_ADMIN_PASS = os.getenv("WEB_ADMIN_PASS", "admin")
-    WEB_AUTH_TOKEN = os.getenv("WEB_AUTH_TOKEN", "dev-admin-token")
+    WEB_AUTH_COD_INSTITUICAO = int(os.getenv("WEB_AUTH_COD_INSTITUICAO", 2007011801))
     
     # Regras/Thresholds Default
     ALERT_DAYS_BEFORE_EXPIRATION = int(os.getenv("ALERT_DAYS_BEFORE_EXPIRATION", 30))

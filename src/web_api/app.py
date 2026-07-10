@@ -24,8 +24,8 @@ def health():
 
 
 @app.post("/api/auth/login", response_model=LoginResponse)
-def auth_login(data: LoginRequest):
-    return login(data)
+def auth_login(data: LoginRequest, db: Session = Depends(get_db)):
+    return login(data, db)
 
 
 @app.get("/api/contracts", dependencies=[Depends(require_auth)])

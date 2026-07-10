@@ -5,10 +5,6 @@ services:
       dockerfile: Dockerfile.api
     env_file:
       - .env
-    environment:
-      WEB_ADMIN_USER: admin
-      WEB_ADMIN_PASS: admin
-      WEB_AUTH_TOKEN: dev-admin-token
     ports:
       - "8000:8000"
     volumes:
