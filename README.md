@@ -72,8 +72,10 @@ npm run dev
 ### CLI (processamento batch)
 
 ```bash
-uv run python src/main.py --src db
-uv run python src/main.py --src db --test 2007020905
+./run.sh                    # Monitoramento completo (fonte: banco)
+./run.sh --src excel        # Usar planilha como fonte
+./run.sh --test 2007020905  # Apenas uma instituição
+./run.sh --debug --full     # Modo debug + relatório completo
 ```
 
 ## Primeiro Acesso
@@ -248,18 +250,10 @@ Parâmetros podem ser combinados:
 ./run.sh --debug --full
 ```
 
-Ou diretamente via `uv`:
+Ou diretamente via `uv run`:
 
 ```bash
-uv run src/main.py
-```
-
-Com opções:
-
-```bash
-uv run src/main.py --debug
-uv run src/main.py --full
-uv run src/main.py --test 12345
+uv run src/main.py --src db --debug --test 12345
 ```
 
 ## Verificação de Resultados
