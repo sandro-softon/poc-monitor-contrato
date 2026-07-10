@@ -110,6 +110,10 @@ class InstitutionRepository:
         nome = data.get("nome_instituicao")
         if not nome:
             raise RuntimeError("nome_instituicao é obrigatório")
+        dt_ini = data.get("dt_ini")
+        dt_fim = data.get("dt_fim")
+        if dt_ini and dt_fim and dt_fim <= dt_ini:
+            raise RuntimeError("Data Fim deve ser maior que Data Início")
 
         from sqlalchemy import insert
 
@@ -163,6 +167,10 @@ class InstitutionRepository:
         return self.get_institution(codigo)
 
     def update_institution(self, codigo: int, data: dict) -> dict:
+        dt_ini = data.get("dt_ini")
+        dt_fim = data.get("dt_fim")
+        if dt_ini and dt_fim and dt_fim <= dt_ini:
+            raise RuntimeError("Data Fim deve ser maior que Data Início")
         values = {
             db_col: data[json_key]
             for json_key, db_col in ALLOWED_FIELDS.items()

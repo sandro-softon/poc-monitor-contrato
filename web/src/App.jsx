@@ -746,7 +746,21 @@ function App() {
                             <Form.Item name="dt_ini" label="Data Início" style={{ flex: 1 }}>
                               <DatePicker format="DD/MM/YYYY" className="center-date" style={{ width: '100%' }} allowClear={false} />
                             </Form.Item>
-                            <Form.Item name="dt_fim" label="Data Fim" style={{ flex: 1 }}>
+                            <Form.Item
+                              name="dt_fim"
+                              label="Data Fim"
+                              style={{ flex: 1 }}
+                              dependencies={['dt_ini']}
+                              rules={[
+                                ({ getFieldValue }) => ({
+                                  validator(_, value) {
+                                    const ini = getFieldValue('dt_ini')
+                                    if (!ini || !value || value.isAfter(ini)) return Promise.resolve()
+                                    return Promise.reject(new Error('Data Fim deve ser maior que Data Início'))
+                                  },
+                                }),
+                              ]}
+                            >
                               <DatePicker format="DD/MM/YYYY" className="center-date" style={{ width: '100%' }} allowClear={false} />
                             </Form.Item>
                             <Form.Item name="dt_corte_inicial" label="Corte Inicial" style={{ flex: 1 }}>
@@ -952,7 +966,21 @@ function App() {
                             <Form.Item name="dt_ini" label="Data Início" style={{ flex: 1 }}>
                               <DatePicker format="DD/MM/YYYY" className="center-date" style={{ width: '100%' }} allowClear={false} />
                             </Form.Item>
-                            <Form.Item name="dt_fim" label="Data Fim" style={{ flex: 1 }}>
+                            <Form.Item
+                              name="dt_fim"
+                              label="Data Fim"
+                              style={{ flex: 1 }}
+                              dependencies={['dt_ini']}
+                              rules={[
+                                ({ getFieldValue }) => ({
+                                  validator(_, value) {
+                                    const ini = getFieldValue('dt_ini')
+                                    if (!ini || !value || value.isAfter(ini)) return Promise.resolve()
+                                    return Promise.reject(new Error('Data Fim deve ser maior que Data Início'))
+                                  },
+                                }),
+                              ]}
+                            >
                               <DatePicker format="DD/MM/YYYY" className="center-date" style={{ width: '100%' }} allowClear={false} />
                             </Form.Item>
                             <Form.Item name="dt_corte_inicial" label="Corte Inicial" style={{ flex: 1 }}>

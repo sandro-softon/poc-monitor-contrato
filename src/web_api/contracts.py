@@ -168,6 +168,10 @@ class ContractRepository:
         return result
 
     def update_contract(self, codigo: int, data: dict) -> dict:
+        dt_ini = data.get("dt_ini")
+        dt_fim = data.get("dt_fim")
+        if dt_ini and dt_fim and dt_fim <= dt_ini:
+            raise RuntimeError("Data Fim deve ser maior que Data Início")
         allowed_general = {
             "numero_contrato": "NUM_CONTRATO",
             "dt_ini": "DT_INI",
