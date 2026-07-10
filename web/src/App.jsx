@@ -355,6 +355,13 @@ function App() {
 
   const contractColumns = [
     {
+      title: '#',
+      key: 'row_number',
+      width: 60,
+      align: 'right',
+      render: (_, __, index) => (pagination.current - 1) * pagination.pageSize + index + 1,
+    },
+    {
       title: 'Código',
       dataIndex: 'codigo_instituicao',
       key: 'codigo_instituicao',
@@ -415,6 +422,13 @@ function App() {
   ]
 
   const instColumns = [
+    {
+      title: '#',
+      key: 'row_number',
+      width: 60,
+      align: 'right',
+      render: (_, __, index) => (instPagination.current - 1) * instPagination.pageSize + index + 1,
+    },
     { title: 'Código', dataIndex: 'codigo_instituicao', key: 'codigo_instituicao', width: 120 },
     { title: 'Nome', dataIndex: 'nome_instituicao', key: 'nome_instituicao' },
     { title: 'Contrato', dataIndex: 'numero_contrato', key: 'numero_contrato', width: 140 },
