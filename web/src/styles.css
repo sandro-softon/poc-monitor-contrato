@@ -181,6 +181,31 @@ body {
   letter-spacing: -0.01em;
 }
 
+.ant-layout-sider-collapsed .brand-title,
+.ant-layout-sider-collapsed .brand-subtitle {
+  display: none;
+}
+
+.ant-layout-sider-collapsed .brand-block {
+  padding: 22px 0;
+  text-align: center;
+}
+
+.ant-layout-sider-collapsed .brand-mark {
+  margin-bottom: 4px;
+}
+
+.ant-layout-sider-collapsed .side-item span {
+  display: none;
+}
+
+.ant-layout-sider-collapsed .side-item {
+  justify-content: center;
+  padding: 0;
+  margin: 4px 12px;
+  width: auto;
+}
+
 .login-page {
   display: grid;
   min-height: 100vh;

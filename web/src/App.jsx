@@ -162,6 +162,7 @@ function formatNumber(value) {
 }
 
 function App() {
+  const [siderCollapsed, setSiderCollapsed] = useState(true)
   const [stylePreset, setStylePreset] = useState(
     () => localStorage.getItem('monitor-contrato-style') || 'dark'
   )
@@ -694,7 +695,16 @@ function App() {
     <ConfigProvider locale={ptBR} theme={antdTheme}>
       <AntApp>
         <Layout className={`app-shell theme-${stylePreset}`}>
-          <Sider width={252} className="app-sider" breakpoint="lg" collapsedWidth="0">
+          <Sider
+            width={252}
+            className="app-sider"
+            collapsible
+            collapsed={siderCollapsed}
+            collapsedWidth={80}
+            trigger={null}
+            onMouseEnter={() => setSiderCollapsed(false)}
+            onMouseLeave={() => setSiderCollapsed(true)}
+          >
             <div className="brand-block">
               <div className="brand-mark">MC</div>
               <h1 className="brand-title">Monitor de Contratos</h1>
