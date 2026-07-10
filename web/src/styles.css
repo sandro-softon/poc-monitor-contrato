@@ -65,16 +65,17 @@ body {
 }
 
 .app-header {
-  display: flex;
+  display: flex !important;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   min-height: 72px;
-  height: auto;
-  padding: 16px 28px;
+  height: auto !important;
+  padding: 16px 28px !important;
   border-bottom: 1px solid rgba(148, 163, 184, 0.14);
   backdrop-filter: blur(16px);
   overflow: visible;
+  line-height: normal !important;
 }
 
 .app-header > div {
