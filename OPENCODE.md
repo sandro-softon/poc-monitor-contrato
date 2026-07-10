@@ -1,6 +1,16 @@
 # OPENCODE.md - Instruções do Projeto
 
-Este projeto é uma automação Python para monitoramento de contratos, leitura de planilha Excel, consulta MySQL e envio de relatórios por e-mail.
+Este projeto é uma automação Python para monitoramento de contratos, com interface web para CRUD e envio de relatórios por e-mail.
+
+## Stack
+
+```text
+Frontend: React + Vite + Ant Design v6
+Backend:  FastAPI + SQLAlchemy 2.x + pymysql
+Banco:    MySQL
+Batch:    Python CLI (mysql-connector-python)
+Estado:   Dockerizado (docker compose)
+```
 
 ## Contexto obrigatório
 
@@ -13,21 +23,20 @@ Este projeto é uma automação Python para monitoramento de contratos, leitura 
 
 - Sincronizar dependências: `uv sync`.
 - Rodar testes neste ambiente: `uv run python -m pytest`.
-- Executar rotina: `./run.sh [--debug] [--full] [--test CODIGO]`.
-- Validar relatório/e-mail com segurança: mockar `smtplib.SMTP` e `smtplib.SMTP_SSL`.
+- Executar rotina: `./run.sh [--src excel|db] [--debug] [--full] [--test CODIGO]`.
+- Build frontend: `cd web && npm run build`.
+- Docker: `docker compose up --build -d`.
 
 ## Regras críticas
 
+- `TB_INSTITUICAO` é fonte de verdade para dados gerais do contrato.
+- `TB_CONTRATO` contém apenas atributos por serviço.
 - Consultas SQL de período usam intervalo aberto, sem `BETWEEN`.
-- Para ciclos em andamento, a apuração de acessos usa dados menores que `TODAY()` porque a base consolidada fecha no dia anterior.
-- As fontes de acesso devem usar corte superior consistente entre `API`, `Individual` e `Lote`.
-- `acessos_realizados` soma somente os serviços contratados na linha da planilha.
-- Serviços válidos no relatório: `Individual`, `Lote` e `API`; não use `.title()` para normalizar serviços.
-- `ILIMITADO` deve permanecer ilimitado e aparecer como `∞` no relatório.
+- Serviços válidos: `Individual`, `Lote`, `API`; não use `.title()`.
+- `acessos_realizados` soma serviços contratados agrupados por instituição.
+- Limite efetivo do grupo = `MAX(limite)` dos serviços da instituição.
+- `ILIMITADO` permanece como `∞` no relatório.
+- Login via `TB_USUARIOS` (COD_INSTITUICAO=2007011801, STATUS=1).
+- Token UUID com 2h de validade.
 - Valores numéricos no relatório usam padrão brasileiro.
-
-## Estado atual importante
-
-- `src/readers/access_reader.py` calcula `effective_end_param` para aplicar o mesmo corte superior nas 3 consultas.
-- `src/core/analyzer.py` diferencia o fim do ciclo contratual do fim efetivo usado na contagem.
-- Próxima melhoria planejada: separar explicitamente no log e no relatório os conceitos `Data referência de corte`, `Início período de Corte`, `Fim período de Corte` e `Fim do Contrato`.
+- Após normalização (Fase 2), serviços são linhas individuais em TB_CONTRATO.

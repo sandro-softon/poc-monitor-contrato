@@ -1,55 +1,117 @@
 # CLAUDE.md - Project Context for AI Agents
 
-Este arquivo fornece diretrizes técnicas e comandos básicos para auxiliar agentes de IA no desenvolvimento deste projeto.
+Este arquivo fornece diretrizes técnicas para auxiliar agentes de IA no desenvolvimento deste projeto.
+
+## Stack Atual
+
+```text
+Frontend: React + Vite + Ant Design v6
+Backend:  FastAPI + SQLAlchemy 2.x + pymysql
+Banco:    MySQL
+Batch:    Python CLI (mysql-connector-python)
+```
 
 ## Comandos Úteis
 
-### Ambiente e Dependências
-Este projeto utiliza o `uv` para gerenciamento de ambiente virtual e dependências.
+### Ambiente
+- `uv sync`: Sincroniza dependências.
+- `npm install` (em `web/`): Instala dependências do frontend.
 
-- `uv sync`: Sincroniza o ambiente com as dependências do `pyproject.toml`.
-- `uv add <pacote>`: Adiciona uma nova dependência.
-- `./run.sh [--debug] [--full] [--test CODIGO]`: Executa a rotina de monitoramento, repassando argumentos para o Python.
-- `uv run src/main.py [--debug] [--full] [--test CODIGO]`: Executa o ponto de entrada principal diretamente.
-- `uv pip install -e .`: Instala o projeto em modo editável (permite rodar `python3 src/main.py` sem PYTHONPATH).
+### Execução
+- `./run.sh [--src excel|db] [--debug] [--full] [--test CODIGO]`: Processo batch.
+- `docker compose up --build -d`: Sobe API + Web.
+- `uv run uvicorn src.web_api.app:app --host 0.0.0.0 --port 8000`: API manual.
+- `cd web && npm run dev`: Frontend manual.
 
-### Qualidade de Código
-- `uv run ruff format .`: Formata o código seguindo as regras do projeto. Não execute para ajustes estéticos sem solicitação explícita.
-- `uv run ruff check .`: Roda o linter para identificar problemas, quando a dependência estiver disponível.
-- `uv run pytest`: Executa a suíte de testes.
+### Qualidade
+- `uv run python -m pytest`: Testes Python.
+- `cd web && npm run build`: Build frontend.
+- `uv run ruff format .`: Formatação (só quando solicitado).
 
-## Diretrizes de Código
+## Arquitetura
 
-- **Contexto Complementar**: Antes de alterar regras de cálculo, relatórios, consultas SQL ou testes, consulte `hints/PROJECT_CONTEXT.md`.
-- **Padrões de Nomenclatura**: use `snake_case` para variáveis, funções e arquivos; `PascalCase` para classes.
-- **Tipagem**: Sempre que possível, utilize Type Hints (ex: `def func(a: int) -> str:`).
-- **Tratamento de Erros**: Utilize blocos `try-except` em pontos críticos, especialmente em operações de I/O (leitura de arquivos, banco de dados, envio de e-mails).
-- **Configuração**: Nunca coloque strings sensíveis (senhas, hosts) diretamente no código. Utilize a classe `Config` em `src/config.py`, que lê do arquivo `.env`.
-- **Imports**: Prefira caminhos absolutos baseados na raiz `src` (ex: `from src.config import Config`). Após `uv pip install -e .`, o Python reconhecerá a pasta `src` automaticamente.
-- **Intervalos de Data**: Para consultas SQL, evite `BETWEEN`. Use a lógica de intervalo aberto: `DATA >= inicio_ciclo AND DATA < fim_ciclo_exclusivo`. A data final exibida ao usuário deve ser `fim_ciclo_exclusivo - 1 dia`.
-- **Frequências de Ciclo**: O cálculo de ciclo suporta mensal (1 mês), trimestral (3 meses), semestral (6 meses) e anual (12 meses).
-- **Banco de Dados**: O consumo é consultado em MySQL via `mysql-connector-python`. A classe `AccessReader` mantém nome legado, mas não acessa banco Access.
-- **Planilha**: A entrada vem do Excel em `Config.EXCEL_PATH`; `Config.EXCEL_SHEET` pode fixar a aba, senão o leitor escolhe a primeira aba com colunas relevantes.
-- **Logs**: O projeto grava logs em console e arquivo (`LOG_DIR`), com retenção configurável por `LOG_RETENTION_DAYS`.
-- **Modo Teste**: `--test CODIGO` filtra contratos por `Codigo Instituicao` (e também `Cod Compartilhado`), força relatório completo para o filtro e envia e-mail normalmente.
-- **Serviços Contratados**: Normalize serviços para as chaves exatas `Individual`, `Lote` e `API`. Não use `.title()` para serviços, pois `API` viraria `Api`.
-- **Total de Acessos**: `acessos_realizados` deve somar apenas os serviços contratados na linha da planilha. O `acessos_breakdown` usado pelo relatório deve ser filtrado para esses serviços.
-- **Limites Ilimitados**: Preserve `ILIMITADO` como limite ilimitado. Não converta para `0`; nesse caso, não calcule percentual de consumo, exiba limite como `∞` e `Consumo do Limite` como `-`.
-- **Valores Vazios**: `NaN` ou vazio em `Valor Excedente` deve ser exibido como `-` no relatório.
-- **Formatação Numérica**: No relatório, formate contadores, limites e percentuais no padrão brasileiro: milhar com `.` e decimal com `,`.
-- **Relatório HTML**: A linha `Total` deve manter o alinhamento dos valores de `Individual`, `Lote` e `API`; para limite ilimitado, o símbolo `∞` deve aparecer em negrito e maior que o texto, sem deslocar a linha.
-- **Relatório de Período**: A query SQL usa limite superior exclusivo, mas a data final exibida no relatório é apresentada como o dia anterior (limite inclusivo humano).
-- **Testes de Relatório**: Ao validar e-mails, prefira mockar `smtplib.SMTP`/`SMTP_SSL` para não enviar e-mail real.
+### Web API (`src/web_api/`)
+```text
+app.py              → FastAPI app, CORS, rotas
+auth.py             → Login via TB_USUARIOS + token UUID (2h expiry)
+contracts.py        → Contratos agregados por instituição
+institutions.py     → CRUD de instituições
+```
+
+### DB Layer (`src/db/`)
+```text
+session.py          → engine + SessionLocal + get_db
+models.py           → Instituicao, Contrato (SQLAlchemy mapped)
+```
+
+### CLI Batch (`src/`)
+```text
+main.py             → Orquestrador, --src excel|db
+readers/            → ContractReader (Excel), ContractDbReader (MySQL), AccessReader
+core/analyzer.py    → Lógica de alertas, agrupa por instituição
+notifications/      → EmailSender (SMTP)
+```
+
+### Frontend (`web/`)
+```text
+src/App.jsx         → SPA completa (login, contratos, instituições, temas)
+src/styles.css      → Tema escuro + temas (grafana, datadog, cartoon)
+```
+
+## Regras Críticas
+
+### Banco de Dados
+- **Fonte de verdade**: `TB_INSTITUICAO` para dados gerais do contrato (NUM_CONTRATO, DT_INI, DT_FIM, COD_COMPARTILHADO, DT_CORTE_INICIAL, FREQUENCIA_CORTE).
+- **TB_CONTRATO**: apenas atributos por serviço (SERVICOS_CONTRATADOS, NUM_AC_CONTRATADOS, VL_EXCEDENTE).
+- Consultas SQL de período usam intervalo aberto: `DATA >= inicio AND DATA < fim_exclusivo`.
+- Evite `BETWEEN`.
+
+### Serviços
+- Serviços válidos: `Individual`, `Lote`, `API`.
+- **Não use `.title()`** — `API` viraria `Api`.
+- Após normalização (Fase 2), cada linha de `TB_CONTRATO` contém um único serviço.
+- `acessos_realizados` soma os serviços contratados da instituição (agrupado).
+- Limite efetivo do grupo = `MAX(limite)` entre os serviços da instituição.
+
+### Autenticação
+- Login consulta `TB_USUARIOS` com `COD_INSTITUICAO = 2007011801` e `STATUS = 1`.
+- Token UUID gerado dinamicamente, expira em 2 horas.
+- `require_auth` via `Depends()` — nenhum endpoint fixo.
+
+### Frontend
+- Drawers de edição com `ServicoInput` (estado local + onBlur) para evitar perda de foco.
+- DatePicker com `allowClear={false}` para preservar valor ao fechar.
+- Sider auto-retátil ao hover (expande/recolhe).
+- Seletor de temas no header (6 temas, persistência em localStorage).
 
 ## Estrutura do Projeto
-- `src/main.py`: Orquestrador da rotina de monitoramento.
-- `src/core/analyzer.py`: Contém a lógica de comparação entre limites e uso.
-- `src/core/date_utils.py`: Calcula ciclos de contrato conforme frequência.
-- `src/readers/`: Classes especializadas em extrair dados de fontes externas (Excel e MySQL).
-- `src/notifications/`: Módulos para disparo de alertas.
-- `tests/`: Testes automatizados de leitura da planilha e regras de datas.
+```text
+src/
+  main.py
+  config.py
+  db/
+    models.py, session.py
+  core/
+    analyzer.py, date_utils.py
+  readers/
+    access_reader.py, contract_db_reader.py, excel_reader.py
+  notifications/
+    email_sender.py
+  web_api/
+    app.py, auth.py, contracts.py, institutions.py
+web/
+  src/App.jsx, src/styles.css
+  tests/ (Playwright)
+sql/
+  tb_contrato_migration.sql, normalizar_servicos.sql
+scripts/
+  export_contracts_excel.py
+tests/
+  test_*.py
+```
 
-## Casos Validados Nesta Sessão
-- `2013032602`: contrato `Individual, API` com limite `ILIMITADO` soma apenas `Individual + API`, exibe limite `∞`; contrato `Lote` exibe apenas `Lote`.
-- `2010062401`: contrato `Individual, Lote, API` validado com total `71.525`, limite `180.000` e consumo `39,74%` no relatório.
-- Amostra de 10 instituições validada com SMTP mockado, totalizando 14 contratos processados, com somas e percentuais consistentes.
+## Casos Validados
+- `2007020905`: Individual=0, Lote=1095, API=0 → Total=1095/500000=0,2%
+- `2015092301`: Individual=0, Lote=1095, API=0 → Total=0/500000=0,0%
+- `2021093001`: Individual=5816, Lote=48541, API=14339870 → Total=14394227/3600000=399,8%
+- `2010062401`: Individual=7.718, Lote=1.202, API=62.605 → Total=71.525/180.000=39,74%
