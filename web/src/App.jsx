@@ -67,6 +67,23 @@ function formatDate(value) {
   return `${parts[2]}/${parts[1]}/${parts[0]}`
 }
 
+function ServicoInput({ value, onChange, ...rest }) {
+  const [local, setLocal] = useState(value)
+
+  useEffect(() => { setLocal(value) }, [value])
+
+  return (
+    <InputNumber
+      value={local}
+      onChange={(v) => setLocal(v)}
+      onBlur={() => {
+        if (local !== value) onChange(local)
+      }}
+      {...rest}
+    />
+  )
+}
+
 function formatNumber(value) {
   if (value === null || value === undefined) return '-'
   return Number(value).toLocaleString('pt-BR')
@@ -430,7 +447,7 @@ function App() {
       key: 'num_ac_contratados',
       width: 130,
       render: (value, record, index) => (
-        <InputNumber
+        <ServicoInput
           value={value}
           onChange={(v) => handleServicoChange(index, 'num_ac_contratados', v)}
           min={0}
@@ -460,7 +477,7 @@ function App() {
       key: 'valor_excedente',
       width: 130,
       render: (value, record, index) => (
-        <InputNumber
+        <ServicoInput
           value={value}
           onChange={(v) => handleServicoChange(index, 'valor_excedente', v)}
           min={0}
