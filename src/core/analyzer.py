@@ -1,5 +1,4 @@
 import logging
-import pandas as pd
 from collections import defaultdict
 from datetime import datetime, timedelta
 from src.config import Config
@@ -10,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 def _normalize_code(value) -> str:
-    if value is None or pd.isna(value):
+    if value is None:
         return ""
 
     text = str(value).strip()
@@ -30,7 +29,7 @@ def _normalize_service(value: str) -> str:
 
 
 def _normalize_limit(value):
-    if value is None or pd.isna(value):
+    if value is None:
         return 0.0, False
 
     if isinstance(value, int | float):
@@ -79,7 +78,7 @@ class ContractAnalyzer:
             dt_fim = first.get("data de corte final")
             frequencia = str(first.get("Frequencia", "Anual")).strip().lower()
 
-            if pd.isna(dt_fim) or pd.isna(dt_inicio):
+            if dt_fim is None or dt_inicio is None:
                 id_text = numero_contrato or instituicao or "n/a"
                 logger.debug(
                     "[SKIP] Contrato %s pulado: dt_inicio=%s dt_fim=%s",
@@ -115,7 +114,7 @@ class ContractAnalyzer:
                     max_limite_val = lim
 
                 ve = contract.get("Valor Excedente")
-                if ve is not None and not (isinstance(ve, float) and pd.isna(ve)):
+                if ve is not None:
                     valor_excedente = ve
 
             servicos_ordered = sorted(all_servicos)
