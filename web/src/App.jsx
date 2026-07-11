@@ -156,6 +156,11 @@ function ServicoInput({ value, onChange, ...rest }) {
   )
 }
 
+async function parseError(response) {
+  try { return await response.json() }
+  catch { return { detail: response.statusText || `Erro ${response.status}` } }
+}
+
 function formatNumber(value) {
   if (value === null || value === undefined) return '-'
   return Number(value).toLocaleString('pt-BR')
@@ -230,7 +235,7 @@ function App() {
         body: JSON.stringify({ username, password }),
       })
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}))
+        const data = await parseError(response)
         throw new Error(data.detail || 'Erro ao autenticar')
       }
       const data = await response.json()
@@ -254,7 +259,7 @@ function App() {
         headers: authHeaders(token),
       })
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}))
+        const data = await parseError(response)
         throw new Error(data.detail || 'Erro ao carregar contratos')
       }
       const data = await response.json()
@@ -282,7 +287,7 @@ function App() {
         headers: authHeaders(token),
       })
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}))
+        const data = await parseError(response)
         throw new Error(data.detail || 'Erro ao carregar instituições')
       }
       const data = await response.json()
@@ -369,7 +374,7 @@ function App() {
         body: JSON.stringify(body),
       })
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}))
+        const data = await parseError(response)
         throw new Error(data.detail || 'Erro ao salvar')
       }
       message.success('Contrato atualizado com sucesso')
@@ -428,7 +433,7 @@ function App() {
           body: JSON.stringify(body),
         })
         if (!response.ok) {
-          const data = await response.json().catch(() => ({}))
+          const data = await parseError(response)
           throw new Error(data.detail || 'Erro ao criar')
         }
         message.success('Instituição criada com sucesso')
@@ -439,7 +444,7 @@ function App() {
           body: JSON.stringify(body),
         })
         if (!response.ok) {
-          const data = await response.json().catch(() => ({}))
+          const data = await parseError(response)
           throw new Error(data.detail || 'Erro ao salvar')
         }
         message.success('Instituição atualizada com sucesso')

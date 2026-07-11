@@ -40,7 +40,7 @@ def list_contracts(
         return ContractRepository(db).list_contracts(
             q=q, monitorar=monitorar, page=page, page_size=page_size
         )
-    except RuntimeError as e:
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -54,7 +54,7 @@ def get_contract_detail(
         if detail is None:
             raise HTTPException(status_code=404, detail="Contrato não encontrado")
         return detail
-    except RuntimeError as e:
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -66,7 +66,7 @@ def update_contract(
 ):
     try:
         return ContractRepository(db).update_contract(codigo, data)
-    except RuntimeError as e:
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -82,7 +82,7 @@ def list_institutions(
         return InstitutionRepository(db).list_institutions(
             q=q, status=status, page=page, page_size=page_size
         )
-    except RuntimeError as e:
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -96,7 +96,7 @@ def get_institution(
         if inst is None:
             raise HTTPException(status_code=404, detail="Instituição não encontrada")
         return inst
-    except RuntimeError as e:
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -111,7 +111,7 @@ def delete_service(
         if "error" in result:
             raise HTTPException(status_code=404, detail=result["error"])
         return result
-    except RuntimeError as e:
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -122,7 +122,7 @@ def create_institution(
 ):
     try:
         return InstitutionRepository(db).create_institution(data)
-    except RuntimeError as e:
+    except Exception as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
@@ -134,5 +134,5 @@ def update_institution(
 ):
     try:
         return InstitutionRepository(db).update_institution(codigo, data)
-    except RuntimeError as e:
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
